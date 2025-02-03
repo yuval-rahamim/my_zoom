@@ -1,59 +1,26 @@
-/* === LIGHT MODE & DARK MODE VARIABLES === */
-:root {
-    --navbar-bg: #ffffff;
-    --text-color: #333;
-    --accent-color: #007bff;
-    --accent-light: rgba(0, 123, 255, 0.2);
-    --hover-bg: rgba(0, 123, 255, 0.1);
-    --button-bg: #ff4b5c;
-    --toggle-bg: #ccc;
-}
-
-/* Dark Mode */
-.dark-mode {
-    --navbar-bg: #000000;
-    --text-color: #f1f1f1;
-    --accent-color: #ffcc00;
-    --accent-light: rgba(255, 204, 0, 0.2);
-    --hover-bg: rgba(255, 204, 0, 0.1);
-    --button-bg: #ff4b5c;
-    --toggle-bg: #555;
-}
-
 /* === NAVBAR STYLES === */
 .navbar {
-    padding: 15px 20px;
-    transition: box-shadow 0.3s, background-color 0.3s;
     background-color: var(--navbar-bg);
     position: sticky;
-    top: 15px;
+    top: 0px;
     left: 0;
-    width: 90%;
+    width: 100%;
     z-index: 100;
-}
-/* In Dark Mode: Subtle Neon Glow */
-.dark-mode .navbar:hover {
-    box-shadow: 0 4px 20px rgba(255, 204, 0, 0.4); /* Soft yellow glow */
-}
-
-/* Navbar Hover Effect */
-.navbar:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 /* Flexbox Container */
 .navbar-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: center;
-    max-width: 1100px;
-    margin: 0 0;
+    height: 80px;
 }
 
 /* Brand Logo */
 .navbar-brand img {
     width: 50px;
-    transition: transform 0.3s ease;
+    height: 50px;
+    transition: transform 0.6s ease;
 }
 
 .navbar-brand:hover img {
@@ -173,7 +140,7 @@
 }
 
 input:checked + .slider {
-    background-color: var(--accent-color);
+    background-color: #363535;
 }
 
 input:checked + .slider:before {

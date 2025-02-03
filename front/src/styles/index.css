@@ -6,6 +6,25 @@
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
+
+  --navbar-bg: #ffffff;
+  --text-color: #333;
+  --accent-color: #007bff;
+  --accent-light: rgba(0, 123, 255, 0.2);
+  --hover-bg: rgba(0, 123, 255, 0.1);
+  --button-bg: #ff4b5c;
+  --toggle-bg: #ccc;
+}
+
+/* Dark Mode */
+.dark-mode {
+  --navbar-bg: #000000;
+  --text-color: #f1f1f1;
+  --accent-color: #007bff;
+  --accent-light: rgba(255, 204, 0, 0.2);
+  --hover-bg: rgba(255, 204, 0, 0.1);
+  --button-bg: #ff4b5c;
+  --toggle-bg: #555;
 }
 
 a {

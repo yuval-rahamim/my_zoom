@@ -48,12 +48,6 @@ const Login = () => {
 
 return (
     <div className={`card ${darkMode ? 'dark' : 'light'}`}>
-      <div className="toggle-container">
-        <label className="switch">
-          <input type="checkbox" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
-          <span className="slider"></span>
-        </label>
-      </div>
       <form onSubmit={submit} className="form">
       <h2 className='center-text'>Login</h2>
         <div className="form-group">

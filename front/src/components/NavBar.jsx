@@ -77,8 +77,8 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
-      <div className={`navbar-container ${darkMode ? 'dark' : 'light'}`}>
+    <nav className={`navbar ${darkMode ? 'dark' : 'light'}`}>
+      <div className='navbar-container'>
         <Link to="/" className="navbar-brand"><img src={logo} width="60"/></Link>
         <Link to="/" className="navbar-brand">zoom</Link>
         <ul className="navbar-links">
