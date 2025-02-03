@@ -33,7 +33,6 @@ func main() {
 
 	// User routes
 	r.PUT("/users/update", controllers.UsersUpdate)
-	r.PUT("/users/manager", controllers.UserMakeManager)
 	r.POST("/users/signup", controllers.UsersCreate)
 	r.POST("/users/login", controllers.Login)
 	r.GET("/users/cookie", controllers.User)

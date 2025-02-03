@@ -38,7 +38,7 @@ const Login = () => {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
-      navigate('/');
+      navigate('/home');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -55,8 +55,8 @@ return (
         </label>
       </div>
       <form onSubmit={submit} className="form">
+      <h2 className='center-text'>Login</h2>
         <div className="form-group">
-          <h2 className='center-text'>Login</h2>
           <label htmlFor="name">Name:</label>
           <input
             type="text"
@@ -81,6 +81,7 @@ return (
           {loading ? 'Loading...' : 'Login'}
         </button>
         <p className="signup-link">Don't have an account? <Link to="/signup">Sign up</Link></p>
+        <p className="home-link">Want to go back to the landing page? <Link to="/">Landing Page</Link></p>
       </form>
     </div>
   );

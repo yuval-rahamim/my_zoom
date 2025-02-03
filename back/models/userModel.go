@@ -6,5 +6,4 @@ type User struct {
 	gorm.Model
 	Name     string `gorm:"unique"`
 	Password []byte `json:"-"`
-	Manager  bool
 }

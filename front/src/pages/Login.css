@@ -1,3 +1,8 @@
+  /* Card Container */
+  .card {
+    text-align: center;
+  }
+
 /* Light Mode */
 .light-mode {
     background: #ffffff;
@@ -94,7 +99,7 @@
   }
   
   input:checked + .slider {
-    background-color: #007BFF;
+    background-color: #000000;
   }
   
   input:checked + .slider:before {

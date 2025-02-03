@@ -54,26 +54,9 @@ func IsUserAuthenticatedGetId(c *gin.Context) (bool, string) {
 	return true, userID
 }
 
-// Checks if the user is a manager
-func IsUserManager(c *gin.Context) bool {
-	isAuthenticated, userID := IsUserAuthenticatedGetId(c)
-	if !isAuthenticated {
-		return false
-	}
-
-	var currentUser models.User
-	if err := inits.DB.Where("id = ?", userID).First(&currentUser).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized: User not found"})
-		return false
-	}
-
-	return currentUser.Manager
-}
-
 var account struct {
 	Name     string
 	Password string
-	Manager  bool
 }
 
 // User login function
@@ -129,10 +112,6 @@ func LogOut(c *gin.Context) {
 
 // Update user details
 func UsersUpdate(c *gin.Context) {
-	if !IsUserManager(c) {
-		return
-	}
-
 	if err := c.BindJSON(&account); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
 		return
@@ -148,9 +127,6 @@ func UsersUpdate(c *gin.Context) {
 	inits.DB.Model(&user).Updates(models.User{
 		Name: account.Name,
 	})
-	if account.Manager != user.Manager {
-		inits.DB.Model(&user).Update("Manager", account.Manager)
-	}
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
@@ -181,7 +157,7 @@ func UsersCreate(c *gin.Context) {
 	}
 
 	// Create the new user
-	user := models.User{Name: account.Name, Password: password, Manager: false}
+	user := models.User{Name: account.Name, Password: password}
 	result = inits.DB.Create(&user)
 	if result.Error != nil {
 		c.Status(http.StatusBadRequest)
@@ -240,33 +216,6 @@ func UsersDelete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
-}
-
-// Make a user a manager
-func UserMakeManager(c *gin.Context) {
-	if !IsUserManager(c) {
-		return
-	}
-
-	var account struct {
-		Name string
-	}
-	if err := c.BindJSON(&account); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
-		return
-	}
-
-	var user models.User
-	result := inits.DB.Where("name = ?", account.Name).First(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
-		return
-	}
-
-	inits.DB.Model(&user).Update("Manager", true)
-
-	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // Get user details
