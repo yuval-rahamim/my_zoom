@@ -7,7 +7,7 @@ const SignUp = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-  const [darkMode, setDarkMode] = useState(() => {
+  const [darkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
   const navigate = useNavigate();

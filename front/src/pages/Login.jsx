@@ -7,7 +7,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
+  const [darkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
 
@@ -37,8 +37,9 @@ const Login = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', data.token)
       navigate('/home');
+      window.location.reload();
     } catch (error) {
       setError(error.message);
     } finally {

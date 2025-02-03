@@ -48,8 +48,7 @@
     gap: 20px;
 }
 
-.navbar-links a,
-.navbar-links button {
+.navbar-links a{
     font-size: 16px;
     color: var(--text-color);
     text-decoration: none;
@@ -59,8 +58,7 @@
 }
 
 /* Hover Effects */
-.navbar-links a:hover,
-.navbar-links button:hover {
+.navbar-links a:hover {
     background: var(--hover-bg);
     transform: translateY(-2px);
 }
@@ -75,22 +73,78 @@
 #user {
     font-size: larger;
     font-weight: 500;
-    color: var(--accent-color);
+    color: var(--text-color);
 }
 
 /* Logout Button */
-#logout {
-    background: var(--button-bg);
-    color: white;
+/* From Uiverse.io by vinodjangid07 */ 
+.Btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 45px;
+    height: 45px;
     border: none;
-    padding: 8px 12px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: background 0.3s;
-}
-
-#logout:hover {
-    background: linear-gradient(to left, rgba(252, 178, 178, 0.952), rgb(255, 0, 0));
-}
+    position: relative;
+    overflow: hidden;
+    transition-duration: .3s;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
+    background-color: rgb(255, 65, 65);
+    padding: 0px;
+  }
+  
+  /* plus sign */
+  .sign {
+    width: 100%;
+    transition-duration: .3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .sign svg {
+    width: 17px;
+  }
+  
+  .sign svg path {
+    fill: white;
+  }
+  /* text */
+  .text {
+    position: absolute;
+    right: 0%;
+    width: 0%;
+    opacity: 0;
+    color: white;
+    font-size: 1.2em;
+    font-weight: 600;
+    transition-duration: .3s;
+  }
+  /* hover effect on button width */
+  .Btn:hover {
+    width: 125px;
+    border-radius: 40px;
+    transition-duration: .3s;
+  }
+  
+  .Btn:hover .sign {
+    width: 30%;
+    transition-duration: .3s;
+    padding-left: 0px;
+  }
+  /* hover effect button's text */
+  .Btn:hover .text {
+    opacity: 1;
+    width: 70%;
+    transition-duration: .3s;
+    padding-right: 10px;
+  }
+  /* button click effect*/
+  .Btn:active {
+    transform: translate(2px ,2px);
+  }
 
 /* === DARK MODE TOGGLE SWITCH === */
 .toggle-container {

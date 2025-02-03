@@ -41,7 +41,7 @@ function Home() {
 
   return (
     <div className="Home">
-        {signedIn ? <h1>My home screen</h1> : <h1>Not signed in</h1>}
+        {signedIn ? <h1>landing page</h1> : <h1>Not signed in</h1>}
         <button>press</button>
     </div>
   );
