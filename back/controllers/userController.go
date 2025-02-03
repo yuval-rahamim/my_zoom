@@ -1,12 +1,12 @@
 package controllers
 
 import (
-	"example/yuval/inits"
-	"example/yuval/models"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+	"yuval/inits"
+	"yuval/models"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"

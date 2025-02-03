@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Login.css';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Login = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const { setIsLoggedIn, setIsManager } = useAuth();
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.body.className = darkMode ? 'dark-mode' : 'light-mode';
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null); // Reset error state before each submission
+    setError(null);
 
     try {
       const response = await fetch('http://localhost:3000/users/login', {
@@ -30,15 +37,8 @@ const Login = () => {
       }
 
       const data = await response.json();
-
-      // Save token to localStorage or any other storage method
       localStorage.setItem('token', data.token);
-
-      setIsLoggedIn(true);
-      if (data.user.Manager) {
-        setIsManager(true);
-      }
-      navigate('/'); // Redirect after successful login
+      navigate('/');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -46,8 +46,14 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="card">
+return (
+    <div className={`card ${darkMode ? 'dark' : 'light'}`}>
+      <div className="toggle-container">
+        <label className="switch">
+          <input type="checkbox" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
+          <span className="slider"></span>
+        </label>
+      </div>
       <form onSubmit={submit} className="form">
         <div className="form-group">
           <h2 className='center-text'>Login</h2>
@@ -74,6 +80,7 @@ const Login = () => {
         <button type="submit" className="btn" disabled={loading}>
           {loading ? 'Loading...' : 'Login'}
         </button>
+        <p className="signup-link">Don't have an account? <Link to="/signup">Sign up</Link></p>
       </form>
     </div>
   );

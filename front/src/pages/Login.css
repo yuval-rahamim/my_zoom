@@ -1,0 +1,103 @@
+/* Light Mode */
+.light-mode {
+    background: #ffffff;
+    color: #333333;
+  }
+  
+  .light-mode .card {
+    background: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .light-mode .form-group input {
+    background: #F8F9FA;
+    color: #333333;
+    border: 1px solid #CCCCCC;
+  }
+  
+  .light-mode .btn {
+    background: #007BFF;
+    color: white;
+  }
+  
+  .light-mode .btn:hover {
+    background: #0056b3;
+  }
+  
+  /* Dark Mode */
+  .dark-mode {
+    background: #000000;
+    color: #ffffff;
+  }
+  
+  .dark-mode .card {
+    background: #222222;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  }
+  
+  .dark-mode .form-group input {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+  }
+  
+  .dark-mode .btn {
+    background: #1E90FF;
+    color: white;
+  }
+  
+  .dark-mode .btn:hover {
+    background: #007BFF;
+  }
+  
+  /* Toggle Switch */
+  .toggle-container {
+    text-align: right;
+    margin-bottom: 10px;
+  }
+  
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+  }
+  
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 20px;
+  }
+  
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+  }
+  
+  input:checked + .slider {
+    background-color: #007BFF;
+  }
+  
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+  

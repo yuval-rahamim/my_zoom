@@ -1,17 +1,17 @@
 // App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import NavigationBar from './components/NavBar';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import SignUp from './pages/SignUp';
+// import NavigationBar from './components/NavBar';
+import Home from './Home.jsx';
+import Login from './Login.jsx';
+import SignUp from './Signup.jsx';
 import './App.css';
 
 const App = () => {
   return ( 
       <Router>
         <div>
-          <NavigationBar />
+          {/* <NavigationBar /> */}
           <div className="container">
             <Routes>
               <Route path="/" element={<Home />} />

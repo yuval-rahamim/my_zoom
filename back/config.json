@@ -1,6 +1,6 @@
 {
     "database": {
-        "dsn": "host=localhost user=host password=1234 dbname=zoom port=5432 sslmode=disable"
+        "dsn": "host=localhost user=postgres password=1234 dbname=zoom port=5432 sslmode=disable"
     },
     "server":{
         "port": 3000

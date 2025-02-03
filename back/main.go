@@ -1,21 +1,15 @@
 package main
 
 import (
-	"example/yuval/controllers"
-	"example/yuval/inits"
-	"example/yuval/models"
 	"fmt"
+	"yuval/controllers"
+	"yuval/inits"
+	"yuval/models"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
-
-type User struct {
-	ID       uint   `gorm:"primaryKey"`
-	Username string `gorm:"unique"`
-	Password string
-}
 
 func init() {
 	inits.InitConfig()
