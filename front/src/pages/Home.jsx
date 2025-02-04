@@ -20,9 +20,11 @@ function Home() {
         if (!response.ok) {
           if (response.status === 401) {
             navigate('/login')
+            window.location.reload();
             throw new Error('Unauthorized. Please log in again.');
           }
           navigate('/signup')
+          window.location.reload();
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 

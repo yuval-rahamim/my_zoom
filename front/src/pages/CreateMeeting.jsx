@@ -62,9 +62,9 @@ const CreateMeeting = () => {
   };
 
   const submit = async (e) => {
-    // e.preventDefault();
-    // if (!validateForm()) return;
-    // try {
+    e.preventDefault();
+    if (!validateForm()) return;
+    try {
     //   const response = await fetch('http://localhost:3000/users/signup', {
     //     method: 'POST',
     //     headers: { 'Content-Type': 'application/json' },
@@ -81,10 +81,10 @@ const CreateMeeting = () => {
     //     text: "You are now moving to sign in",
     //     icon: "success"
     //   });
-    //   navigate('/login');
-    // } catch (error) {
-    //   setError(error.message);
-    // }
+    //   navigate('/room');
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   return (
