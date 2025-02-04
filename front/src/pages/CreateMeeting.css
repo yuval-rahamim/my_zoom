@@ -10,7 +10,10 @@
 }
 
 .check a{
-    font-size: 10px;
+    font-size: small;
     margin-left: 5px;
     color: var(--light-text-color);
+}
+.check label{
+    font-size: large;
 }

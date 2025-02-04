@@ -98,10 +98,11 @@ const CreateMeeting = () => {
                     <span className="checkbox-box"></span>
                 </label>
                 <div className='check'>
-                    <label htmlFor="WaitingRoom">Waiting Room:</label>
+                    <label htmlFor="WaitingRoom">Waiting Room</label>
                     <a>Only users admitted by the host can join the meeting</a>
                 </div>
             </div>
+            
         </div> 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn">Create Room</button>
