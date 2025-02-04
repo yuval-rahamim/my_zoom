@@ -1,57 +1,13 @@
-  /* Card Container */
-  .card {
-    text-align: center;
-  }
-
-/* Light Mode */
-.light-mode {
-    background: #ffffff;
-    color: #333333;
+  /* Sign-in Link */
+  .signin-link {
+    margin-top: 15px;
   }
   
-  .light-mode .card {
-    background: #ffffff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  .signin-link a {
+    color: #007BFF;
+    text-decoration: none;
   }
   
-  .light-mode .form-group input {
-    background: #F8F9FA;
-    color: #333333;
-    border: 1px solid #CCCCCC;
+  .signin-link a:hover {
+    text-decoration: underline;
   }
-  
-  .light-mode .btn {
-    background: #007BFF;
-    color: white;
-  }
-  
-  .light-mode .btn:hover {
-    background: #0056b3;
-  }
-  
-  /* Dark Mode */
-  .dark-mode {
-    background: #000000;
-    color: #ffffff;
-  }
-  
-  .dark-mode .card {
-    background: #222222;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-  }
-  
-  .dark-mode .form-group input {
-    background: #333333;
-    color: #ffffff;
-    border: 1px solid #555555;
-  }
-  
-  .dark-mode .btn {
-    background: #1E90FF;
-    color: white;
-  }
-  
-  .dark-mode .btn:hover {
-    background: #007BFF;
-  }
-  

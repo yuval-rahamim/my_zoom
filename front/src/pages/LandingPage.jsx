@@ -5,6 +5,9 @@ function Home() {
   const [error, setError] = useState(null);
   const [signedIn, setSignedIn] = useState(false);
   const navigate = useNavigate();
+  const [darkMode] = useState(() => {
+      return localStorage.getItem('theme') === 'dark';
+    });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -15,11 +18,10 @@ function Home() {
         });
 
         if (!response.ok) {
-            setSignedIn(false);
+          setSignedIn(false);
           if (response.status === 401) {
             throw new Error('Unauthorized. Please log in again.');
           }
-          navigate('/signup')
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
@@ -40,7 +42,7 @@ function Home() {
   }, []); 
 
   return (
-    <div className="Home">
+    <div className={`Home ${darkMode ? 'dark' : 'light'}`}>
         {signedIn ? <h1>landing page</h1> : <h1>Not signed in</h1>}
         <button>press</button>
     </div>

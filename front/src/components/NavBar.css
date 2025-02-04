@@ -1,11 +1,11 @@
 /* === NAVBAR STYLES === */
 .navbar {
-    background-color: var(--navbar-bg);
     position: sticky;
     top: 0px;
     left: 0;
     width: 100%;
     z-index: 100;
+    background-color: var(--background);
 }
 
 /* Flexbox Container */
@@ -78,7 +78,7 @@
 
 /* Logout Button */
 /* From Uiverse.io by vinodjangid07 */ 
-.Btn {
+.Logout {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -123,28 +123,56 @@
     transition-duration: .3s;
   }
   /* hover effect on button width */
-  .Btn:hover {
+  .Logout:hover {
     width: 125px;
     border-radius: 40px;
     transition-duration: .3s;
   }
   
-  .Btn:hover .sign {
+  .Logout:hover .sign {
     width: 30%;
     transition-duration: .3s;
     padding-left: 0px;
   }
   /* hover effect button's text */
-  .Btn:hover .text {
+  .Logout:hover .text {
     opacity: 1;
     width: 70%;
     transition-duration: .3s;
     padding-right: 10px;
   }
   /* button click effect*/
-  .Btn:active {
+  .Logout:active {
     transform: translate(2px ,2px);
   }
+
+.navbar-links-brand {
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-links-brand a{
+    font-size: 16px;
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background 0.3s, transform 0.2s;
+}
+
+/* === MOBILE RESPONSIVENESS === */
+@media (max-width: 768px) {
+    .navbar-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .navbar-links {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
 
 /* === DARK MODE TOGGLE SWITCH === */
 .toggle-container {
@@ -199,32 +227,4 @@ input:checked + .slider {
 
 input:checked + .slider:before {
     transform: translateX(22px);
-}
-
-.navbar-links-brand {
-    list-style: none;
-    display: flex;
-    align-items: center;
-}
-
-.navbar-links-brand a{
-    font-size: 16px;
-    color: var(--text-color);
-    text-decoration: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    transition: background 0.3s, transform 0.2s;
-}
-
-/* === MOBILE RESPONSIVENESS === */
-@media (max-width: 768px) {
-    .navbar-container {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .navbar-links {
-        flex-direction: column;
-        gap: 10px;
-    }
 }

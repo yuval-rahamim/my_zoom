@@ -7,15 +7,11 @@ const SignUp = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
   const [darkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    document.body.className = darkMode ? 'dark-mode' : 'light-mode';
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
 
   const validateForm = () => {
     if (name.length < 2) {

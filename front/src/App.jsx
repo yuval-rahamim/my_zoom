@@ -6,6 +6,8 @@ import LandingPage from './pages/LandingPage.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import SignUp from './pages/Signup.jsx';
+import CreateMeeting from './pages/CreateMeeting.jsx'
+
 import './styles/App.css';
 
 const App = () => {
@@ -19,6 +21,7 @@ const App = () => {
               <Route path="/home" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/createmeeting" element={<CreateMeeting />}></Route>
             </Routes>
           </div>
         </div>

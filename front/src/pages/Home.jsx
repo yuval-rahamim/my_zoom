@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react'; 
 import { useNavigate } from 'react-router-dom';
+import './Home.css';
 
 function Home() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [darkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -38,9 +42,14 @@ function Home() {
   }, []); 
 
   return (
-    <div className="Home">
+    <div className={`Home ${darkMode ? 'dark' : 'light'}`}>
         <h1>My home screen</h1>
-        <button>press</button>
+        <div className='button-wrap'>
+          <button className='b' >Join</button>
+          <button className='b' onClick={()=>{navigate('/createmeeting')}}>Create</button>
+          <button className='b'>Friends</button>
+          <button className='b'>Edit user</button>
+        </div>
     </div>
   );
 }

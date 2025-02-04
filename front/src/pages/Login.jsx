@@ -13,11 +13,6 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    document.body.className = darkMode ? 'dark-mode' : 'light-mode';
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
-
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);

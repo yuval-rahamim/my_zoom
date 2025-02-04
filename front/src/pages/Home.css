@@ -1,0 +1,33 @@
+.Home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.button-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+    max-width: 500px;
+    margin-top: 80px;
+}
+
+.b {
+    flex: 1 1 calc(50% - 10px); /* Two buttons per row */
+    max-width: 200px;
+    height:100px;
+    padding: 10px;
+    text-align: center;
+    font-size: 30px;
+}
+
+/* === MOBILE RESPONSIVENESS === */
+@media (max-width: 470px) {
+    .b {
+        max-width: 130px;
+        font-size: 20px;
+    }
+}

@@ -1,6 +1,53 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
 #root {
-  margin: 0 auto;
+  margin: 0 0;
   text-align: center;
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: #2C3E50;
+  background-color: #F7F9FC;
+  
+  --background: #F7F9FC;
+  --navbar-bg: #E3E6EE;
+  --text-color: #2C3E50;
+  --accent-color: #1E6091;
+  --accent-light: #0D47A1;
+  --hover-bg: rgba(13, 71, 161, 0.1);
+  --button-bg: #2D87F0;
+  --button-hover: #1A73E8;
+  --icon-color: #586069;
+  --toggle-bg: #CCC;
+}
+
+/* Dark Mode */
+.dark-mode {
+  --background: #1E1E2E;
+  --navbar-bg: #252537;
+  --text-color: #EAEAEA;
+  --accent-color: #63B3ED;
+  --accent-light: #4299E1;
+  --hover-bg: rgba(66, 153, 225, 0.1);
+  --button-bg: #3182CE;
+  --button-hover: #2B6CB0;
+  --icon-color: #C0C5CE;
+  --toggle-bg: #555;
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.light-mode {
+  background: var(--background);
+  color: var(--text-color);
 }
 
 .logo {
@@ -10,10 +57,7 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em var(--accent-light));
 }
 
 @keyframes logo-spin {
@@ -32,22 +76,108 @@
 }
 
 .card {
-  padding: 2em;
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  background: var(--navbar-bg);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.read-the-docs {
-  color: #888;
+.dark-mode .card {
+  background: #252537;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  transition: box-shadow 0.3s, background-color 0.3s;
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
 }
 
-.container body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-height: 100vh;
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* General Input Style */
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--text-color);
+  border: 1px solid var(--icon-color);
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+/* Text Input and Password Styling */
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group input[type="tel"] {
+  font-size: 16px;
+  height: 40px;
+}
+
+/* Checkbox and Radio Styling */
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+  width: auto; /* Make checkboxes and radio buttons smaller */
+  margin-right: 10px; /* Space between the input and label */
+  display: inline-block;
+}
+
+/* Select Input Styling */
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--text-color);
+  border: 1px solid var(--icon-color);
+  font-size: 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Textarea Styling */
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--text-color);
+  border: 1px solid var(--icon-color);
+  font-size: 16px;
+  resize: vertical; /* Allow vertical resizing only */
+  box-sizing: border-box;
+}
+
+/* Focus States */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent-light);
+  outline: none;
+}
+
+.btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  background: var(--button-bg);
+  color: white;
+}
+
+.btn:hover {
+  background: var(--button-hover);
+}
+
+.error {
+  color: red;
+  margin-top: 10px;
 }
