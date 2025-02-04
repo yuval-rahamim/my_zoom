@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'; 
 import { Link, useNavigate } from 'react-router-dom';
 import './NavBar.css';
-import logo from '../assets/react.svg';
+import logo from '../assets/logo.webp';
 
 const Navbar = () => {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const Navbar = () => {
     };
 
     fetchUser();
-  });
+  },[token]);
 
   const logout = async (e) => {
     e.preventDefault();
@@ -74,8 +75,10 @@ const Navbar = () => {
   return (
     <nav className={`navbar ${darkMode ? 'dark' : 'light'}`}>
       <div className='navbar-container'>
+        <ul className="navbar-links-brand">
         <Link to="/" className="navbar-brand"><img src={logo} width="60" alt="logo"/></Link>
         <Link to="/" className="navbar-brand">zoom</Link>
+        </ul>
         <ul className="navbar-links">
           {!isLoggedIn ? (
             <>

@@ -201,6 +201,21 @@ input:checked + .slider:before {
     transform: translateX(22px);
 }
 
+.navbar-links-brand {
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-links-brand a{
+    font-size: 16px;
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background 0.3s, transform 0.2s;
+}
+
 /* === MOBILE RESPONSIVENESS === */
 @media (max-width: 768px) {
     .navbar-container {
