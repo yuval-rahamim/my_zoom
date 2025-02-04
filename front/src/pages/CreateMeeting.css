@@ -3,4 +3,14 @@
     flex-wrap: wrap;
     align-items: center; 
     text-align: center;  
-  }
+}
+
+.checkbox-wrapper{
+    display: flex;
+}
+
+.check a{
+    font-size: 10px;
+    margin-left: 5px;
+    color: var(--light-text-color);
+}

@@ -92,14 +92,14 @@ const CreateMeeting = () => {
       <form onSubmit={submit} className="form">
         <h2 className='center-text'>Create meeting</h2>
         <div className="form-group">
-            <div style={{display:'flex'}}>
+            <div className="checkbox-wrapper">
                 <label className="checkbox-container">
                     <input type="checkbox" className="checkbox-input" value={WaitingRoom} onChange={(e) => setIsWaitingRoom(e.target.value)}/>
                     <span className="checkbox-box"></span>
                 </label>
                 <div className='check'>
                     <label htmlFor="WaitingRoom">Waiting Room:</label>
-                    <a style={{fontSize:'10px'}}>Only users admitted by the host can join the meeting</a>
+                    <a>Only users admitted by the host can join the meeting</a>
                 </div>
             </div>
         </div> 

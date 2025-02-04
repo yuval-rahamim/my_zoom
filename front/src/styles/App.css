@@ -16,9 +16,10 @@ body {
   color-scheme: light dark;
   color: #2C3E50;
   background-color: #F7F9FC;
-  
+
   --background: #F7F9FC;
   --navbar-bg: #E3E6EE;
+  --light-text-color: #6c7a89; 
   --text-color: #2C3E50;
   --accent-color: #1E6091;
   --accent-light: #0D47A1;
@@ -33,6 +34,7 @@ body {
 .dark-mode {
   --background: #1E1E2E;
   --navbar-bg: #252537;
+  --light-text-color: #c3c3c3;
   --text-color: #EAEAEA;
   --accent-color: #63B3ED;
   --accent-light: #4299E1;
