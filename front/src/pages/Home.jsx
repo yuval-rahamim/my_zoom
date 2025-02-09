@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState,useContext } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import './Home.css';
+import { AuthContext } from '../components/AuthContext';
 
 function Home() {
   const [error, setError] = useState(null);
@@ -8,6 +9,9 @@ function Home() {
   const [darkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
+
+  const [user, setUser] = useState(null);
+  const { isLoggedIn, logout, loading } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -18,19 +22,18 @@ function Home() {
         });
 
         if (!response.ok) {
+          logout()
           if (response.status === 401) {
             navigate('/login')
-            window.location.reload();
             throw new Error('Unauthorized. Please log in again.');
           }
           navigate('/signup')
-          window.location.reload();
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
         const data = await response.json();
         if (data.user) { 
           console.log(data.user)
+          setUser(data.user);
         } else {
           throw new Error('User data not found.');
         }
@@ -40,14 +43,21 @@ function Home() {
       }
     };
 
-    fetchUser();
-  }, []); 
+    if (loading) return; // Don't do anything while auth is still loading
+
+    if (!isLoggedIn) {
+      navigate('/login'); 
+    } else {
+      fetchUser();
+    }
+
+  }, [isLoggedIn, loading]); 
 
   return (
     <div className={`Home ${darkMode ? 'dark' : 'light'}`}>
         <h1>My home screen</h1>
         <div className='button-wrap'>
-          <button className='b' >Join</button>
+          <button className='b' onClick={()=>{navigate('/m')}}>Join</button>
           <button className='b' onClick={()=>{navigate('/createmeeting')}}>Create</button>
           <button className='b'>Friends</button>
           <button className='b' onClick={()=>{navigate('/edit')}}>Edit user</button>

@@ -9,13 +9,14 @@ import SignUp from './pages/Signup.jsx';
 import CreateMeeting from './pages/CreateMeeting.jsx'
 import EditUser from './pages/EditUser.jsx'
 import Meeting from './pages/Meeting.jsx'
+import {AuthProvider} from './components/AuthContext'
 
 import './styles/App.css';
 
 const App = () => {
   return ( 
       <Router>
-        <div>
+        <AuthProvider>
           <NavigationBar />
           <div className="container">
             <Routes>
@@ -28,7 +29,7 @@ const App = () => {
               <Route path="/m" element={<Meeting />}></Route>
             </Routes>
           </div>
-        </div>
+        </AuthProvider>
       </Router>
   );
 };

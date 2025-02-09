@@ -1,48 +1,58 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from "sweetalert2";
+import { AuthContext } from '../components/AuthContext';
 
 const Meeting = () => {
-    const [user, setUser] = useState(null);
+
     const [error, setError] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
     const [videoSrc, setVideoSrc] = useState("");
     const navigate = useNavigate();
     const [darkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
+    const [user, setUser] = useState(null);
+    const { isLoggedIn, logout, loading } = useContext(AuthContext);
+
     useEffect(() => {
         const fetchUser = async () => {
-            try {
-                const response = await fetch('http://localhost:3000/users/cookie', {
-                    method: 'GET',
-                    credentials: 'include',
-                });
+        try {
+            const response = await fetch('http://localhost:3000/users/cookie', {
+            method: 'GET',
+            credentials: 'include',
+            });
 
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        navigate('/login');
-                        window.location.reload();
-                        throw new Error('Unauthorized. Please log in again.');
-                    }
-                    navigate('/signup');
-                    window.location.reload();
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                if (data.user) {
-                    setUser(data.user);
-                } else {
-                    throw new Error('User data not found.');
-                }
-            } catch (error) {
-                console.error('Error fetching user:', error);
-                setError(error.message);
+            if (!response.ok) {
+            logout()
+            if (response.status === 401) {
+                navigate('/login')
+                throw new Error('Unauthorized. Please log in again.');
             }
+            navigate('/signup')
+            throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+            if (data.user) { 
+            console.log(data.user)
+            setUser(data.user);
+            } else {
+            throw new Error('User data not found.');
+            }
+        } catch (error) {
+            setError(error.message);
+            console.error('Error fetching user:', error);
+        }
         };
 
+        if (loading) return; // Don't do anything while auth is still loading
+
+        if (!isLoggedIn) {
+        navigate('/login'); 
+        } else {
         fetchUser();
-    }, [navigate]);
+        }
+
+    }, [isLoggedIn, loading]); 
 
     // Handle video file selection
     const handleChange = (event) => {
@@ -66,7 +76,7 @@ const Meeting = () => {
             formData.append('Name', user.Name); // Include existing user data
             formData.append('ImgPath', user.ImgPath);
 
-            const response = await fetch('http://localhost:3000/users/update', {
+            const response = await fetch('http://localhost:3000/video/add', {
                 method: 'PUT',
                 credentials: 'include',
                 body: formData, // Send FormData instead of JSON

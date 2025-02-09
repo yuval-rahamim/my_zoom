@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './CreateMeeting.css';
+import { AuthContext } from '../components/AuthContext';
 
 const CreateMeeting = () => {
-//   const [name, setName] = useState('');
-//   const [password, setPassword] = useState('');
   const [WaitingRoom, setIsWaitingRoom] = useState(false)
-  const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
@@ -16,37 +14,49 @@ const CreateMeeting = () => {
     return localStorage.getItem('theme') === 'dark';
   });
 
+
+  const [user, setUser] = useState(null);
+  const { isLoggedIn, logout, loading } = useContext(AuthContext);
+
   useEffect(() => {
-      const fetchUser = async () => {
-        try {
-          const response = await fetch('http://localhost:3000/users/cookie', {
-            method: 'GET',
-            credentials: 'include',
-          });
-  
-          if (!response.ok) {
-            if (response.status === 401) {
-              navigate('/login')
-              throw new Error('Unauthorized. Please log in again.');
-            }
-            navigate('/signup')
-            throw new Error(`HTTP error! Status: ${response.status}`);
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/users/cookie', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          logout()
+          if (response.status === 401) {
+            navigate('/login')
+            throw new Error('Unauthorized. Please log in again.');
           }
-  
-          const data = await response.json();
-          if (data.user) {
-            setUser(data.user);
-          } else {
-            throw new Error('User data not found.');
-          }
-        } catch (error) {
-          console.error('Error fetching user:', error);
-          setError(error.message);
+          navigate('/signup')
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-      };
-  
+        const data = await response.json();
+        if (data.user) { 
+          console.log(data.user)
+          setUser(data.user);
+        } else {
+          throw new Error('User data not found.');
+        }
+      } catch (error) {
+        setError(error.message);
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    if (loading) return; // Don't do anything while auth is still loading
+
+    if (!isLoggedIn) {
+      navigate('/login'); 
+    } else {
       fetchUser();
-    },[]);
+    }
+
+  }, [isLoggedIn, loading]); 
 
   const validateForm = () => {
     // if (name.length < 2) {

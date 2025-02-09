@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from "sweetalert2";
+import { AuthContext } from '../components/AuthContext';
 
 const EditUser = () => {
    const [user, setUser] = useState(null);
@@ -10,74 +11,82 @@ const EditUser = () => {
      ImgPath: ''
    });
 
+   const { isLoggedIn, logout, loading, setUserUpdated } = useContext(AuthContext);
+
    const navigate = useNavigate();
    const [darkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-   useEffect(() => {
-       const fetchUser = async () => {
-         try {
-           const response = await fetch('http://localhost:3000/users/cookie', {
-             method: 'GET',
-             credentials: 'include',
-           });
-   
-           if (!response.ok) {
-             if (response.status === 401) {
-               navigate('/login');
-               window.location.reload();
-               throw new Error('Unauthorized. Please log in again.');
-             }
-             navigate('/signup');
-              window.location.reload();
-             throw new Error(`HTTP error! Status: ${response.status}`);
-           }
-   
-           const data = await response.json();
-           if (data.user) {
-             setUser(data.user);
-             setUpdatedUser({ Name: data.user.Name, ImgPath: data.user.ImgPath });
-           } else {
-             throw new Error('User data not found.');
-           }
-         } catch (error) {
-           console.error('Error fetching user:', error);
-           setError(error.message);
-         }
-       };
-   
-       fetchUser();
-     }, [navigate]);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/users/cookie', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          logout()
+          if (response.status === 401) {
+            navigate('/login')
+            throw new Error('Unauthorized. Please log in again.');
+          }
+          navigate('/signup')
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.user) { 
+          console.log(data.user)
+          setUser(data.user);
+          setUpdatedUser({ Name: data.user.Name, ImgPath: data.user.ImgPath });
+        } else {
+          throw new Error('User data not found.');
+        }
+      } catch (error) {
+        setError(error.message);
+        console.error('Error fetching user:', error);
+      }
+    };
+
+    if (loading) return; // Don't do anything while auth is still loading
+
+    if (!isLoggedIn) {
+      navigate('/login'); 
+    } else {
+      fetchUser();
+    }
+
+  }, [isLoggedIn, loading]); 
 
    const handleUpdateUser = async () => {
-     if (updatedUser.Name.length < 3) {
-       Swal.fire("Error", "User name must be at least 3 characters long", "error");
-       return;
-     }
+  if (updatedUser.Name.length < 3) {
+    Swal.fire("Error", "User name must be at least 3 characters long", "error");
+    return;
+  }
 
-     try {
-       const response = await fetch('http://localhost:3000/users/update', {
-         method: 'PUT',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         credentials: 'include',
-         body: JSON.stringify({ Name: updatedUser.Name, ImgPath: updatedUser.ImgPath, }),
-       });
+  try {
+    const response = await fetch('http://localhost:3000/users/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ Name: updatedUser.Name, ImgPath: updatedUser.ImgPath }),
+    });
 
-       if (!response.ok) {
-         throw new Error('Failed to update user');
-       }
+    if (!response.ok) {
+      throw new Error('Failed to update user');
+    }
 
-       Swal.fire("Success", "User updated successfully", "success").then(() => {
-         navigate('/home'); // Redirect after success
-         window.location.reload();
-       });
-     } catch (error) {
-       setError(error.message);
-       console.error('Error updating user:', error);
-       Swal.fire("Error", "Failed to update user", "error");
-     }
-   };
+    Swal.fire("Success", "User updated successfully", "success").then(() => {
+      setUserUpdated(prev => !prev); //  Notify Navbar about the update
+      navigate('/home');
+    });
+  } catch (error) {
+    setError(error.message);
+    console.error('Error updating user:', error);
+    Swal.fire("Error", "Failed to update user", "error");
+  }
+};
 
    const handleImageUpload = (e) => {
      const file = e.target.files[0];

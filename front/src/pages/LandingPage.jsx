@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'; 
+import React, { useContext,useEffect, useState } from 'react'; 
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../components/AuthContext';
 
-function Home() {
+function LandingPage() {
   const [error, setError] = useState(null);
-  const [signedIn, setSignedIn] = useState(false);
+  const { isLoggedIn, logout, loading } = useContext(AuthContext);
   const navigate = useNavigate();
   const [darkMode] = useState(() => {
       return localStorage.getItem('theme') === 'dark';
@@ -18,7 +19,7 @@ function Home() {
         });
 
         if (!response.ok) {
-          setSignedIn(false);
+          logout();
           if (response.status === 401) {
             throw new Error('Unauthorized. Please log in again.');
           }
@@ -28,7 +29,6 @@ function Home() {
         const data = await response.json();
         if (data.user) { 
           console.log(data.user)
-          setSignedIn(true);
         } else {
           throw new Error('User data not found.');
         }
@@ -38,15 +38,20 @@ function Home() {
       }
     };
 
-    fetchUser();
-  }, []); 
+    if (loading) return; // Don't do anything while auth is still loading
+
+    if (isLoggedIn){
+      fetchUser();
+    }
+
+  }, [isLoggedIn, loading]); 
 
   return (
     <div className={`Home ${darkMode ? 'dark' : 'light'}`}>
-        {signedIn ? <h1>landing page</h1> : <h1>Not signed in</h1>}
+        {isLoggedIn ? <h1>landing page</h1> : <h1>Not signed in</h1>}
         <button>press</button>
     </div>
   );
 }
 
-export default Home;
+export default LandingPage;

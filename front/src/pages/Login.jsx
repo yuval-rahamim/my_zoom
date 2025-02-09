@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useContext  } from 'react';
 import './Login.css';
 import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../components/AuthContext';
 
 const Login = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
   const [darkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -32,9 +34,8 @@ const Login = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.token)
+      login(); // Update global state
       navigate('/home');
-      window.location.reload();
     } catch (error) {
       setError(error.message);
     } finally {

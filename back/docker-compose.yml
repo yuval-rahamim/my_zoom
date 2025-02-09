@@ -1,0 +1,50 @@
+services:
+  api:
+    build:
+      context: ./api
+    container_name: api-server
+    ports:
+      - "3000:3000"
+    networks:
+      - my_network
+    volumes:
+      - ./api:/app
+    environment:
+      - DATABASE_URL=postgres://user:password@postgres-db:5432/mydb?sslmode=disable
+  streamer:
+    build:
+      context: ./streamer
+    container_name: streamer-service
+    ports:
+      - "4000:4000"
+    networks:
+      - my_network
+    volumes:
+      - ./streamer:/app
+  
+  dasher:
+    build:
+      context: ./dasher
+    container_name: dasher-service
+    ports:
+      - "5000:5000"
+    networks:
+      - my_network
+    volumes:
+      - ./dasher:/app
+  
+  database:
+    image: postgres:13
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: zoom
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge
