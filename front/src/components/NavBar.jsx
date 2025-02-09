@@ -98,7 +98,10 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <li><span id='user'>Hello, {user?.Name || 'User'}</span></li>
+              <div className='user-show' >
+                <li> <Link to="/edit" ><img src={user.ImgPath} alt="" /> </Link></li>
+                <li> <Link to="/edit"><span id='user'>{user?.Name || 'User'}</span></Link></li>
+              </div>
               <li>
                 <button className="Logout" onClick={logout}>
                   <div className="sign">

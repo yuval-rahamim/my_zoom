@@ -57,6 +57,7 @@ func IsUserAuthenticatedGetId(c *gin.Context) (bool, string) {
 var account struct {
 	Name     string
 	Password string
+	ImgPath  string
 }
 
 // User login function
@@ -112,23 +113,56 @@ func LogOut(c *gin.Context) {
 
 // Update user details
 func UsersUpdate(c *gin.Context) {
-	if err := c.BindJSON(&account); err != nil {
+	// Ensure user is authenticated
+	isAuthenticated, userID := IsUserAuthenticatedGetId(c)
+	if !isAuthenticated {
+		return
+	}
+
+	// Bind JSON input
+	if err := c.ShouldBindJSON(&account); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
 		return
 	}
 
+	// Fetch user from database using authenticated user ID
 	var user models.User
-	result := inits.DB.Where("name = ?", account.Name).First(&user)
-	if result.Error != nil {
+	if err := inits.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return
 	}
 
-	inits.DB.Model(&user).Updates(models.User{
-		Name: account.Name,
-	})
+	// Prepare updates
+	updates := map[string]interface{}{}
+	// Validate name length
+	if len(account.Name) > 3 && account.Name != user.Name {
+		// Check if the new name already exists (excluding the authenticated user)
+		var existingUser models.User
+		if err := inits.DB.Where("name = ? AND id != ?", account.Name, userID).First(&existingUser).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "User name already exists, try another name"})
+			return
+		}
+		updates["Name"] = account.Name
+	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	// Only update ImgPath if it's different
+	if account.ImgPath != "" && account.ImgPath != user.ImgPath {
+		updates["ImgPath"] = account.ImgPath
+	}
+
+	// If there are no updates, return success without making a DB call
+	if len(updates) == 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "No changes detected"})
+		return
+	}
+
+	// Perform update
+	if err := inits.DB.Model(&user).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "user": user})
 }
 
 // Create a new user
