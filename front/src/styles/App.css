@@ -23,6 +23,7 @@
   --button-hover: #1A73E8;
   --icon-color: #586069;
   --toggle-bg: #CCC;
+  --img-bright:0;
 }
 
 /* Dark Mode */
@@ -38,6 +39,7 @@
   --button-hover: #2B6CB0;
   --icon-color: #C0C5CE;
   --toggle-bg: #555;
+  --img-bright:0.8;
   background: var(--background);
   color: var(--text-color);
 }
@@ -87,12 +89,25 @@ html, body  {
   text-align: center;
   background: var(--navbar-bg);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background: var(--hover-bg);
 }
 
 .dark-mode .card {
   background: #252537;
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
 }
+
+.dark-mode .card:hover {
+  box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
+  background: rgba(66, 153, 225, 0.1);
+}
+
 
 .form-group {
   margin-bottom: 15px;

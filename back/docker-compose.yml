@@ -8,9 +8,12 @@ services:
     networks:
       - my_network
     volumes:
+      - ./config.json:/app/config.json:ro  
       - ./api:/app
     environment:
-      - DATABASE_URL=postgres://user:password@postgres-db:5432/mydb?sslmode=disable
+      - DATABASE_URL=postgres://postgres:1234@postgres-db:5432/zoom?sslmode=disable
+
+
   streamer:
     build:
       context: ./streamer

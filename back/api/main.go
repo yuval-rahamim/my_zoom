@@ -27,7 +27,10 @@ func main() {
 	// Enable CORS for frontend
 	r.SetTrustedProxies([]string{"127.0.0.1"})
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5174"},
+		//AllowOrigins:     []string{"http://localhost:5174"}, // Allow specific origin instead of all. instead of AllowOriginFunc
+		AllowOriginFunc: func(origin string) bool {
+			return true // Allow all origins dynamically
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,

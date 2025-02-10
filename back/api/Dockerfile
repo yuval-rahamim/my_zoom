@@ -1,19 +1,19 @@
-# Use the official Golang image to build the API server
-FROM golang:1.20-alpine as build
+# Use the official Golang 1.23 image for building
+FROM golang:1.23-alpine as build
 
 WORKDIR /app
 
-# Copy the Go module files and download dependencies
+# Copy go module files and download dependencies
 COPY go.mod go.sum ./
 RUN go mod tidy
 
 # Copy the source code
 COPY . .
 
-# Build the API binary
-RUN go build -o api-server .
+# Build the binary with optimizations
+RUN CGO_ENABLED=0 go build -o api-server .
 
-# Use a smaller image for the final container
+# Use a minimal image for production (scratch or alpine)
 FROM alpine:latest
 
 WORKDIR /root/

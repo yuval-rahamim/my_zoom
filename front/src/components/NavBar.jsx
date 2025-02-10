@@ -95,7 +95,7 @@ const Navbar = () => {
             <>
               {user && (
                 <div className='user-show'>
-                  <li> <Link to="/edit"><img src={user.ImgPath} alt="Profile" /></Link></li>
+                  <li> <img src={user.ImgPath} alt="Profile" /></li>
                   <li> <Link to="/edit"><span id='user'>{user.Name || 'User'}</span></Link></li>
                 </div>
               )}

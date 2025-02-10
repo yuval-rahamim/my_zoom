@@ -3,8 +3,11 @@ package controllers
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Convert MPEG-TS to MPEG-DASH using FFmpeg
@@ -22,4 +25,19 @@ func RunCommand(command string) error {
 		return fmt.Errorf("Command failed: %v", err)
 	}
 	return nil
+}
+
+func main() {
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
+	})
+	r.POST("/send", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
+	})
+	r.Run(":5000")
 }

@@ -64,6 +64,7 @@ var account struct {
 func Login(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&account); err != nil {
+		log.Printf("Database error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
 		return
 	}
@@ -72,6 +73,7 @@ func Login(c *gin.Context) {
 	result := inits.DB.Where("name = ?", account.Name).First(&user)
 
 	if result.Error != nil {
+		log.Printf("Database error: %v", result.Error)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "User not found"})
 		return
 	}
@@ -125,7 +127,6 @@ func UsersUpdate(c *gin.Context) {
 		return
 	}
 
-	// Fetch user from database using authenticated user ID
 	var user models.User
 	if err := inits.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})

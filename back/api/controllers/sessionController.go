@@ -21,7 +21,7 @@ func CreateSession(c *gin.Context) {
 	}
 
 	// Retrieve the user from the session
-	userID, exists := c.Get("userID") // Assuming you use some kind of middleware to set the userID
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
@@ -54,7 +54,7 @@ func JoinSession(c *gin.Context) {
 	}
 
 	// Retrieve the user from the session
-	userID, exists := c.Get("userID") // Assuming you use some kind of middleware to set the userID
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
