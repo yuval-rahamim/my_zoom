@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -54,10 +55,68 @@ func IsUserAuthenticatedGetId(c *gin.Context) (bool, string) {
 	return true, userID
 }
 
+// Checks if the user is a manager
+func IsUserManager(c *gin.Context) bool {
+	isAuthenticated, userID := IsUserAuthenticatedGetId(c)
+	if !isAuthenticated {
+		return false
+	}
+
+	var currentUser models.User
+	if err := inits.DB.Where("id = ?", userID).First(&currentUser).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized: User not found"})
+		return false
+	}
+
+	return currentUser.Manager
+}
+
 var account struct {
 	Name     string
 	Password string
 	ImgPath  string
+	Manager  bool
+}
+
+// Create a new user
+func UsersCreate(c *gin.Context) {
+
+	// Bind JSON input
+	if err := c.ShouldBindJSON(&account); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
+		return
+	}
+
+	// Check if the user already exists
+	var existingUser models.User
+	result := inits.DB.Where("name = ?", account.Name).First(&existingUser)
+	if result.Error == nil {
+		// User already exists
+		c.JSON(http.StatusBadRequest, gin.H{"message": "User already signed up, try signing in"})
+		return
+	}
+
+	// Hash the password
+	password, err := bcrypt.GenerateFromPassword([]byte(account.Password), 14)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Error hashing password"})
+		return
+	}
+
+	// Create the new user
+	user := models.User{
+		Name:     account.Name,
+		Password: password,
+		Manager:  false,
+	}
+
+	result = inits.DB.Create(&user)
+	if result.Error != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // User login function
@@ -113,93 +172,97 @@ func LogOut(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// Update user details
-func UsersUpdate(c *gin.Context) {
-	// Ensure user is authenticated
-	isAuthenticated, userID := IsUserAuthenticatedGetId(c)
-	if !isAuthenticated {
+// Unified Update function for user
+func UserUpdate(c *gin.Context) {
+	// Get userID from middleware
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
 		return
 	}
 
-	// Bind JSON input
-	if err := c.ShouldBindJSON(&account); err != nil {
+	// Convert userID to string (if stored as int in context)
+	userIDStr := fmt.Sprintf("%v", userID)
+
+	// Check if the user is a manager
+	isManager := IsUserManager(c)
+
+	// Parse request body for the update
+	var input struct {
+		Name     string `json:"Name"`
+		ImgPath  string `json:"ImgPath"`
+		UserName string `json:"userName"` // Target user to update, if different from the logged-in user
+		Manager  bool   `json:"Manager"`  // To update manager status (only for managers)
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
 		return
 	}
 
-	var user models.User
-	if err := inits.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
-		return
+	// Check if we are updating the logged-in user or someone else
+	var targetUser models.User
+	if input.UserName == "" {
+		// If no UserName is provided, update the current user
+		if err := inits.DB.First(&targetUser, userIDStr).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+			return
+		}
+	} else {
+		// If updating another user, ensure the logged-in user is a manager
+		if !isManager {
+			c.JSON(http.StatusForbidden, gin.H{"message": "You must be a manager to update another user"})
+			return
+		}
+
+		// If updating another user, find the target user
+		if err := inits.DB.Where("name = ?", input.UserName).First(&targetUser).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+			return
+		}
 	}
 
 	// Prepare updates
 	updates := map[string]interface{}{}
-	// Validate name length
-	if len(account.Name) >= 3 && account.Name != user.Name {
-		// Check if the new name already exists (excluding the authenticated user)
+	if len(input.Name) >= 3 && input.Name != targetUser.Name {
+		// Check if the new name is already taken (except for the current user)
 		var existingUser models.User
-		if err := inits.DB.Where("name = ? AND id != ?", account.Name, userID).First(&existingUser).Error; err == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": "User name already exists, try another name"})
+		if err := inits.DB.Where("name = ? AND id != ?", input.Name, targetUser.ID).First(&existingUser).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "User name already exists"})
 			return
 		}
-		updates["Name"] = account.Name
+		updates["Name"] = input.Name
 	}
 
-	// Only update ImgPath if it's different
-	if account.ImgPath != "" && account.ImgPath != user.ImgPath {
-		updates["ImgPath"] = account.ImgPath
+	if input.ImgPath != "" && input.ImgPath != targetUser.ImgPath {
+		updates["ImgPath"] = input.ImgPath
 	}
 
-	// If there are no updates, return success without making a DB call
+	// Only allow managers to update "Manager" status
+	if isManager && targetUser.Manager != input.Manager {
+		updates["Manager"] = input.Manager
+	}
+
+	// If the user is not a manager, they cannot change the "Manager" field
+	if !isManager && input.Manager != targetUser.Manager {
+		// Make sure users cannot change their "Manager" status
+		c.JSON(http.StatusForbidden, gin.H{"message": "You cannot change your Manager status"})
+		return
+	}
+
+	// If there are no changes, return early
 	if len(updates) == 0 {
 		c.JSON(http.StatusOK, gin.H{"message": "No changes detected"})
 		return
 	}
 
-	// Perform update
-	if err := inits.DB.Model(&user).Updates(updates).Error; err != nil {
+	// Apply updates
+	if err := inits.DB.Model(&targetUser).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update user"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "user": user})
-}
-
-// Create a new user
-func UsersCreate(c *gin.Context) {
-
-	// Bind JSON input
-	if err := c.ShouldBindJSON(&account); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
-		return
-	}
-
-	// Check if the user already exists
-	var existingUser models.User
-	result := inits.DB.Where("name = ?", account.Name).First(&existingUser)
-	if result.Error == nil {
-		// User already exists
-		c.JSON(http.StatusBadRequest, gin.H{"message": "User already signed up, try signing in"})
-		return
-	}
-
-	// Hash the password
-	password, err := bcrypt.GenerateFromPassword([]byte(account.Password), 14)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Error hashing password"})
-		return
-	}
-
-	// Create the new user
-	user := models.User{Name: account.Name, Password: password}
-	result = inits.DB.Create(&user)
-	if result.Error != nil {
-		c.Status(http.StatusBadRequest)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "user": targetUser})
 }
 
 // List all users
@@ -234,16 +297,12 @@ func UsersShow(c *gin.Context) {
 
 // Delete a user
 func UsersDelete(c *gin.Context) {
-	var user struct {
-		Name string
-	}
-
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&account); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
 		return
 	}
 
-	result := inits.DB.Unscoped().Where("Name = ?", user.Name).Delete(&models.User{})
+	result := inits.DB.Unscoped().Where("Name = ?", account.Name).Delete(&models.User{})
 
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
@@ -253,27 +312,51 @@ func UsersDelete(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// Make a user a manager
+func UserMakeManager(c *gin.Context) {
+	if err := c.BindJSON(&account); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid input"})
+		return
+	}
+
+	var user models.User
+	result := inits.DB.Where("name = ?", account.Name).First(&user)
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+		return
+	}
+
+	inits.DB.Model(&user).Update("Manager", true)
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
 // Get user details
 func User(c *gin.Context) {
-	cookieValue, err := c.Cookie("JWT")
-	if err != nil {
+	userID, exists := c.Get("userID")
+	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
 		return
 	}
 
-	token, err := jwt.Parse(cookieValue, func(token *jwt.Token) (interface{}, error) {
-		return []byte(viper.GetString("secret")), nil
-	})
-	if err != nil || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
-		return
-	}
-
-	claims := token.Claims.(jwt.MapClaims)
-	userID := claims["iss"]
+	userIDStr := fmt.Sprintf("%v", userID)
 	var user models.User
-	if err := inits.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := inits.DB.Where("id = ?", userIDStr).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+// GetUserByName fetches a user by their name from the database
+func GetUserByName(c *gin.Context) {
+	name := c.Param("name") // Extract the username from the URL
+
+	var user models.User
+	if err := inits.DB.Where("name = ?", name).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return
 	}
 

@@ -15,7 +15,6 @@ import (
 func init() {
 	inits.InitConfig()
 	inits.ConnectToDB()
-
 	inits.DB.AutoMigrate(&models.User{}, &models.Session{}) // Ensure you migrate all relevant models
 }
 
@@ -27,7 +26,6 @@ func main() {
 	// Enable CORS for frontend
 	r.SetTrustedProxies([]string{"127.0.0.1"})
 	r.Use(cors.New(cors.Config{
-		//AllowOrigins:     []string{"http://localhost:5174"}, // Allow specific origin instead of all. instead of AllowOriginFunc
 		AllowOriginFunc: func(origin string) bool {
 			return true // Allow all origins dynamically
 		},
@@ -36,23 +34,26 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// User routes (no authentication required)
-	r.PUT("/users/update", controllers.UsersUpdate)
-	r.POST("/users/signup", controllers.UsersCreate)
+	// Public routes
 	r.POST("/users/login", controllers.Login)
-	r.GET("/users/cookie", controllers.User)
-	r.POST("/users/logout", controllers.LogOut)
-	r.GET("/users", controllers.UsersIndex)
-	r.GET("/users/:id", controllers.UsersShow)
-	r.DELETE("/users/delete", controllers.UsersDelete)
+	r.POST("/users/signup", controllers.UsersCreate)
 
-	// Protected routes (authentication required)
-	auth := r.Group("/")
-	auth.Use(middleware.AuthMiddleware()) // Apply the authentication middleware to all routes in this group
+	// Protected user routes (Require authentication)
+	r.GET("/users", middleware.AuthMiddleware(), controllers.UsersIndex)
+	r.PUT("/users/update", middleware.AuthMiddleware(), controllers.UserUpdate)
+	r.GET("/users/cookie", middleware.AuthMiddleware(), controllers.User)
+	r.POST("/users/logout", middleware.AuthMiddleware(), controllers.LogOut)
+	r.GET("/users/:name", middleware.AuthMiddleware(), controllers.GetUserByName)
 
-	auth.POST("/sessions/create", controllers.CreateSession) // Session creation (requires authentication)
-	auth.POST("/sessions/join", controllers.JoinSession)     // Join session (requires authentication)
+	// Session routes (Require authentication)
+	r.POST("/sessions/create", middleware.AuthMiddleware(), controllers.CreateSession)
+	r.POST("/sessions/join", middleware.AuthMiddleware(), controllers.JoinSession)
 
+	// Admin routes (Require both authentication & manager check)
+	r.DELETE("/users/delete", middleware.AuthMiddleware(), middleware.ManagerMiddlewar(), controllers.UsersDelete)
+	r.PUT("/users/manager", middleware.AuthMiddleware(), middleware.ManagerMiddlewar(), controllers.UserMakeManager)
+
+	// Start server
 	port := viper.GetInt("server.port")
 	r.Run(fmt.Sprintf(":%d", port))
 }

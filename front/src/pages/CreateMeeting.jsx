@@ -112,7 +112,6 @@ const CreateMeeting = () => {
                     <a>Only users admitted by the host can join the meeting</a>
                 </div>
             </div>
-            
         </div> 
         {error && <p className="error">{error}</p>}
         <button type="submit" className="btn">Create Room</button>

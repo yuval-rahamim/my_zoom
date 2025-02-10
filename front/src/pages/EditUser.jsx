@@ -1,134 +1,205 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useContext } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { AuthContext } from '../components/AuthContext';
+import { AuthContext } from "../components/AuthContext";
 
 const EditUser = () => {
-   const [user, setUser] = useState(null);
-   const [error, setError] = useState(null);
-   const [updatedUser, setUpdatedUser] = useState({
-     Name: '',
-     ImgPath: ''
-   });
+  const [currentUser, setCurrentUser] = useState(null); // Logged-in user
+  const [updatedUser, setUpdatedUser] = useState({
+    Name: "",
+    ImgPath: "",
+    Manager: false,
+  });
 
-   const { isLoggedIn, logout, loading, setUserUpdated } = useContext(AuthContext);
-
-   const navigate = useNavigate();
-   const [darkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [error, setError] = useState(null);
+  const { isLoggedIn, loading, setUserUpdated } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { name } = useParams(); // Get the username from the URL
+  const [darkMode] = useState(() => localStorage.getItem("theme") === "dark");
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users/cookie', {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          logout()
-          if (response.status === 401) {
-            navigate('/login')
-            throw new Error('Unauthorized. Please log in again.');
+        // Fetch the logged-in user
+        const currentUserResponse = await fetch(
+          "http://localhost:3000/users/cookie",
+          {
+            method: "GET",
+            credentials: "include",
           }
-          navigate('/signup')
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        );
+
+        if (!currentUserResponse.ok) {
+          throw new Error("Failed to fetch logged-in user");
         }
-        const data = await response.json();
-        if (data.user) { 
-          console.log(data.user)
-          setUser(data.user);
-          setUpdatedUser({ Name: data.user.Name, ImgPath: data.user.ImgPath });
+
+        const currentUserData = await currentUserResponse.json();
+        if (!currentUserData.user) {
+          throw new Error("Current user data not found.");
+        }
+        setCurrentUser(currentUserData.user);
+
+        // If editing another user, fetch their data
+        if (name) {
+          const targetUserResponse = await fetch(
+            `http://localhost:3000/users/${name}`,
+            {
+              method: "GET",
+              credentials: "include",
+            }
+          );
+
+          if (!targetUserResponse.ok) {
+            throw new Error("Failed to fetch target user");
+          }
+
+          const targetUserData = await targetUserResponse.json();
+          if (!targetUserData.user) {
+            throw new Error("Target user data not found.");
+          }
+
+          setUpdatedUser({
+            Name: targetUserData.user.Name,
+            ImgPath: targetUserData.user.ImgPath,
+            Manager: targetUserData.user.Manager,
+          });
         } else {
-          throw new Error('User data not found.');
+          // If editing self, set user data
+          setUpdatedUser({
+            Name: currentUserData.user.Name,
+            ImgPath: currentUserData.user.ImgPath,
+            Manager: currentUserData.user.Manager,
+          });
         }
       } catch (error) {
         setError(error.message);
-        console.error('Error fetching user:', error);
+        console.error("Error fetching users:", error);
       }
     };
 
-    if (loading) return; // Don't do anything while auth is still loading
-
+    if (loading) return;
     if (!isLoggedIn) {
-      navigate('/login'); 
+      navigate("/login");
     } else {
-      fetchUser();
+      fetchUsers();
     }
+  }, [isLoggedIn, loading, name]);
 
-  }, [isLoggedIn, loading]); 
-
-   const handleUpdateUser = async () => {
-  if (updatedUser.Name.length < 3) {
-    Swal.fire("Error", "User name must be at least 3 characters long", "error");
-    return;
-  }
-
-  try {
-    const response = await fetch('http://localhost:3000/users/update', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ Name: updatedUser.Name, ImgPath: updatedUser.ImgPath }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update user');
+  const handleUpdateUser = async () => {
+    if (updatedUser.Name.length < 3) {
+      Swal.fire("Error", "User name must be at least 3 characters long", "error");
+      return;
     }
+  
+    try {
+      const endpoint = `http://localhost:3000/users/update`; // Unified endpoint
+  
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          Name: updatedUser.Name,
+          ImgPath: updatedUser.ImgPath,
+          Manager: updatedUser.Manager,
+          userName: name || undefined, // Send userName if updating another user's details
+        }),
+      });
+  
+      if (!response.ok) {
+        // Handle specific error codes from the backend
+        if (response.status === 403) {
+          throw new Error("You don't have permission to update this user");
+        }
+        throw new Error("Failed to update user");
+      }
+  
+      Swal.fire("Success", "User updated successfully", "success").then(() => {
+        setUserUpdated((prev) => !prev);
+        navigate("/home");
+      });
+    } catch (error) {
+      setError(error.message);
+      console.error("Error updating user:", error);
+      Swal.fire("Error", error.message, "error");
+    }
+  };
+  
 
-    Swal.fire("Success", "User updated successfully", "success").then(() => {
-      setUserUpdated(prev => !prev); //  Notify Navbar about the update
-      navigate('/home');
-    });
-  } catch (error) {
-    setError(error.message);
-    console.error('Error updating user:', error);
-    Swal.fire("Error", "Failed to update user", "error");
-  }
-};
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-   const handleImageUpload = (e) => {
-     const file = e.target.files[0];
-     if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUpdatedUser((prev) => ({ ...prev, ImgPath: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
-     const reader = new FileReader();
-     reader.onloadend = () => {
-       setUpdatedUser(prev => ({ ...prev, ImgPath: reader.result }));
-     };
-     reader.readAsDataURL(file);
-   };
-
-   return (
-     <div className="home">
-       {error && <p className="error">{error}</p>}
-       <div className={`card ${darkMode ? 'dark' : 'light'}`}>
-         <h2 className='center-text'>Edit User Page</h2>
-         <div className="form-group">
-           <label htmlFor="name">Name:</label>
-           <input
-             type="text"
-             id="name"
-             value={updatedUser.Name}
-             onChange={(e) => setUpdatedUser(prev => ({ ...prev, Name: e.target.value }))}
-             required
-           />
-         </div>
-         <div className="form-group">
-           <label>
-             Upload Image:
-             <input type="file" accept="image/*" onChange={handleImageUpload} />
-           </label>
-           {updatedUser.ImgPath && (
-             <div className="image-preview">
-               <img style={{ borderRadius: '50%' }} src={updatedUser.ImgPath} alt="Profile Preview" width="100" />
-             </div>
-           )}
-         </div>
-         <button onClick={handleUpdateUser} className="btn">Update User</button>
-       </div>
-     </div>
-   );
+  return (
+    <div className="home">
+      {error && <p className="error">{error}</p>}
+      <div className={`card ${darkMode ? "dark" : "light"}`}>
+        <h2 className="center-text">Edit {name || "Your"} Profile</h2>
+        <div className="form-group">
+          <label htmlFor="name">Name:</label>
+          <input
+            type="text"
+            id="name"
+            value={updatedUser.Name}
+            onChange={(e) =>
+              setUpdatedUser((prev) => ({ ...prev, Name: e.target.value }))
+            }
+            required
+          />
+        </div>
+        {name && currentUser?.Manager && (
+          <div className="form-group">
+            <div className="checkbox-wrapper">
+              <label className="checkbox-container" htmlFor="WaitingRoom">
+                <input
+                  type="checkbox"
+                  id="WaitingRoom"
+                  className="checkbox-input"
+                  checked={updatedUser.Manager}
+                  onChange={(e) =>
+                    setUpdatedUser((prev) => ({
+                      ...prev,
+                      Manager: e.target.checked,
+                    }))
+                  }
+                />
+                <span className="checkbox-box"></span>
+              </label>
+              <label htmlFor="WaitingRoom">Is Manager</label>
+            </div>
+          </div>
+        )}
+        <div className="form-group">
+          <label>
+            Upload Image:
+            <input type="file" accept="image/*" onChange={handleImageUpload} />
+          </label>
+          {updatedUser.ImgPath && (
+            <div className="image-preview">
+              <img
+                style={{ borderRadius: "50%" }}
+                src={updatedUser.ImgPath}
+                alt="Profile Preview"
+                width="100"
+              />
+            </div>
+          )}
+        </div>
+        <button onClick={handleUpdateUser} className="btn">
+          Update User
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default EditUser;
