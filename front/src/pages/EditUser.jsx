@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { redirect, useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { AuthContext } from "../components/AuthContext";
 
@@ -41,6 +41,14 @@ const EditUser = () => {
 
         // If editing another user, fetch their data
         if (name) {
+          if(!currentUserData.user.Manager){
+            Swal.fire("Error","You don't have permission to update this user", "error");
+            navigate("/edit");
+          }
+          if(name==currentUserData.user.Name){
+            navigate("/edit");
+
+          }
           const targetUserResponse = await fetch(
             `http://localhost:3000/users/${name}`,
             {
