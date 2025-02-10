@@ -11,3 +11,50 @@
 .signin-link a:hover {
   text-decoration: underline;
 }
+
+/* Container for password input and icon */
+.password-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Password input styling */
+.password-container input {
+  width: 100%;
+  padding: 10px 40px 10px 10px; /* Add padding to make space for the icon */
+  font-size: 16px;
+}
+
+/* Eye icon container */
+.eye-container {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+/* Hide the checkbox */
+.eye-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Eye icons */
+.eye,
+.eye-slash {
+  width: 20px;
+  height: 20px;
+  fill: #777;
+  transition: fill 0.3s;
+}
+
+.eye-container:hover .eye,
+.eye-container:hover .eye-slash {
+  fill: #333;
+}
