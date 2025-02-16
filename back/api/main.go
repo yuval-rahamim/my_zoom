@@ -38,6 +38,9 @@ func main() {
 	r.POST("/users/login", controllers.Login)
 	r.POST("/users/signup", controllers.UsersCreate)
 
+	r.Static("/uploads", "./uploads")
+	r.POST("/video/upload", controllers.ConvertToMPEGTS)
+
 	// Protected user routes (Require authentication)
 	r.GET("/users", middleware.AuthMiddleware(), controllers.UsersIndex)
 	r.PUT("/users/update", middleware.AuthMiddleware(), controllers.UserUpdate)

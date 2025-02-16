@@ -12,6 +12,7 @@ const Meeting = () => {
     const [darkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
     const [user, setUser] = useState(null);
+    const [name, setName] = useState("");
     const { isLoggedIn, logout, loading } = useContext(AuthContext);
 
     useEffect(() => {
@@ -34,6 +35,7 @@ const Meeting = () => {
             const data = await response.json();
             if (data.user) { 
             console.log(data.user)
+            setName(data.user.Name);
             setUser(data.user);
             } else {
             throw new Error('User data not found.');
@@ -73,11 +75,11 @@ const Meeting = () => {
         try {
             const formData = new FormData();
             formData.append('video', videoFile);
-            formData.append('Name', user.Name); // Include existing user data
+            formData.append('Name', name); // Include existing user data
             formData.append('ImgPath', user.ImgPath);
 
-            const response = await fetch('http://localhost:3000/video/add', {
-                method: 'PUT',
+            const response = await fetch('http://localhost:3000/video/upload', {
+                method: 'POST',
                 credentials: 'include',
                 body: formData, // Send FormData instead of JSON
             });
@@ -86,10 +88,11 @@ const Meeting = () => {
                 throw new Error('Failed to update user');
             }
 
-            Swal.fire("Success", "User updated successfully", "success").then(() => {
-                navigate('/home'); // Redirect after success
-                window.location.reload();
-            });
+            const data = await response.json();
+            Swal.fire("Success", "Video uploaded successfully", "success");
+    
+            // Redirect to watch the stream
+            setVideoSrc(data.stream_url);
         } catch (error) {
             setError(error.message);
             console.error('Error updating user:', error);
@@ -102,6 +105,18 @@ const Meeting = () => {
             {error && <p className="error">{error}</p>}
             <div className={`card ${darkMode ? 'dark' : 'light'}`}>
                 <h2 className='center-text'>Meeting</h2>
+                <div className="form-group">
+                    <label htmlFor="name">Name:</label>
+                    <input
+                        type="text"
+                        id="name"
+                        value={name}
+                        onChange={(e) =>
+                        setName(e.target.value)
+                        }
+                        required
+                    />
+                </div>
                 <div className="form-group">
                     <label>
                         Upload Video:
