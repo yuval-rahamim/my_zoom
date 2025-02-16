@@ -2,8 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
-import MediaPlayer from 'dashjs';
-
+import * as dashjs from 'dashjs';
 const Meeting = () => {
     const [videoFile, setVideoFile] = useState(null);
     const [videoSrc, setVideoSrc] = useState('');
@@ -14,7 +13,7 @@ const Meeting = () => {
     const videoRef = useRef(null); // Ref for the video element
 
     useEffect(() => {
-        console.log("MediaPlayer:", MediaPlayer); // Add this line
+        console.log("MediaPlayer:", dashjs.MediaPlayer()); // Add this line
         const fetchUser = async () => {
             try {
                 const response = await fetch('http://localhost:3000/users/cookie', {
@@ -104,7 +103,7 @@ const Meeting = () => {
 
     useEffect(() => {
         if (videoSrc && videoRef.current) {
-            const player = MediaPlayer.create();
+            const player = dashjs.MediaPlayer().create();
             player.initialize(videoRef.current, videoSrc, true);
 
             return () => {
