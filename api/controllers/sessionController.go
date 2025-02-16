@@ -89,6 +89,7 @@ func JoinSession(c *gin.Context) {
 // Convert MP4 (or live stream) to MPEG-TS
 func ConvertToMPEGTS(c *gin.Context) {
 	userName := c.PostForm("Name")
+
 	// Parse file from request
 	file, err := c.FormFile("video")
 	if err != nil {
@@ -97,27 +98,28 @@ func ConvertToMPEGTS(c *gin.Context) {
 	}
 
 	// Save uploaded file
-	uploadDir := "mp4uploads/" + userName
+	uploadDir := filepath.Join("uploads", userName)
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
 	}
 
-	filePath := filepath.ToSlash(filepath.Join(uploadDir, file.Filename)) // Ensure proper path formatting
+	filePath := filepath.ToSlash(filepath.Join(uploadDir, file.Filename))
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
 
 	// Convert MP4 to MPEG-TS
-	mpegTSPath := filepath.Join(uploadDir, "output.ts")
-	cmd := fmt.Sprintf("ffmpeg -i mp4uploads/yuv/r.mp4 -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 t.ts")
+	mpegTSPath := filepath.ToSlash(filepath.Join(uploadDir, "output.ts"))
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", filePath, mpegTSPath)
+
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
 		return
 	}
 
-	// Call the function to convert MPEG-TS to MPEG-DASH
+	// Convert MPEG-TS to MPEG-DASH
 	convertToMPEGDASH(mpegTSPath, userName, c)
 }
 
@@ -129,9 +131,10 @@ func convertToMPEGDASH(mpegTSPath string, userName string, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
 		return
 	}
+	//`ffmpeg -i "%s" -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 10 -use_template 1 -use_timeline 1 -init_seg_name "init.mp4" -media_seg_name "chunk_%%04d.m4s" "%s"`,
 
 	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
-	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash %s", mpegTSPath, mpdFilePath)
+	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1  %s", mpegTSPath, mpdFilePath)
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
 		return

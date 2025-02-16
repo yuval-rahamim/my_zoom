@@ -38,7 +38,7 @@ func main() {
 	r.POST("/users/login", controllers.Login)
 	r.POST("/users/signup", controllers.UsersCreate)
 
-	r.Static("/mp4uploads", "./mp4uploads")
+	r.Static("/uploads", "./uploads")
 	r.POST("/video/upload", controllers.ConvertToMPEGTS)
 
 	// Protected user routes (Require authentication)

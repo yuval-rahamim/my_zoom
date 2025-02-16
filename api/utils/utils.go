@@ -5,10 +5,16 @@ import (
 	"log"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 // RunCommand executes a command in the shell and handles errors
 func RunCommand(command string) error {
+	// Ensure cross-platform file paths
+	if runtime.GOOS == "windows" {
+		command = strings.ReplaceAll(command, "\\", "/") // Convert Windows paths to Unix-style for FFmpeg
+	}
+
 	var cmd *exec.Cmd
 
 	// Check OS and set the right shell
