@@ -9,18 +9,6 @@ import (
 
 // RunCommand executes a command in the shell and handles errors
 func RunCommand(command string) error {
-	cmd := exec.Command("bash", "-c", command)
-
-	output, err := cmd.CombinedOutput() // Capture stdout and stderr
-	if err != nil {
-		log.Printf("Command failed: %v\nstderr: %s\n", err, string(output))
-		return fmt.Errorf("Command failed: %v, stderr: %s", err, string(output))
-	}
-	return nil
-}
-
-// RunCommand executes a command in the shell and handles errors
-func WindowesRunCommand(command string) error {
 	var cmd *exec.Cmd
 
 	// Check OS and set the right shell
@@ -30,7 +18,11 @@ func WindowesRunCommand(command string) error {
 		cmd = exec.Command("bash", "-c", command) // Use bash on Linux/Mac
 	}
 
-	output, err := cmd.CombinedOutput() // Capture stdout and stderr
+	// Run the command and capture the output
+	output, err := cmd.CombinedOutput()
+	log.Printf("Command: %s\nOutput: %s\n", command, string(output)) // Log command and output
+
+	// If the command failed, log the error and return it
 	if err != nil {
 		log.Printf("Command failed: %v\nstderr: %s\n", err, string(output))
 		return fmt.Errorf("Command failed: %v, stderr: %s", err, string(output))

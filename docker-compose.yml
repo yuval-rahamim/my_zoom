@@ -26,7 +26,7 @@ services:
       - ./config.json:/app/config.json:ro  
       - ./api:/app
     environment:
-      - DATABASE_URL=postgres://postgres:1234@postgres-db:5432/zoom?sslmode=disable
+      - DATABASE_URL=postgres://postgres:1234@postgres:5432/zoom?sslmode=disable
 
   streamer:
     build:

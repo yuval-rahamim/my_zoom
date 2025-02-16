@@ -97,13 +97,13 @@ func ConvertToMPEGTS(c *gin.Context) {
 	}
 
 	// Save uploaded file
-	uploadDir := "uploads/" + userName
+	uploadDir := "mp4uploads/" + userName
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 		return
 	}
 
-	filePath := filepath.Join(uploadDir, file.Filename)
+	filePath := filepath.ToSlash(filepath.Join(uploadDir, file.Filename)) // Ensure proper path formatting
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
@@ -111,7 +111,7 @@ func ConvertToMPEGTS(c *gin.Context) {
 
 	// Convert MP4 to MPEG-TS
 	mpegTSPath := filepath.Join(uploadDir, "output.ts")
-	cmd := fmt.Sprintf(`ffmpeg -i "%s" -c:v libx264 -c:a aac -strict experimental -f mpegts "%s"`, filePath, mpegTSPath)
+	cmd := fmt.Sprintf("ffmpeg -i mp4uploads/yuv/r.mp4 -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 t.ts")
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
 		return
