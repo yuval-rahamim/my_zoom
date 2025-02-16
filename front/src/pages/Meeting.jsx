@@ -1,67 +1,57 @@
-import React, { useEffect, useState,useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from "sweetalert2";
 import { AuthContext } from '../components/AuthContext';
+import MediaPlayer from 'dashjs';
 
 const Meeting = () => {
-
-    const [error, setError] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
     const [videoSrc, setVideoSrc] = useState("");
-    const navigate = useNavigate();
-    const [darkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-    const [user, setUser] = useState(null);
     const [name, setName] = useState("");
     const { isLoggedIn, logout, loading } = useContext(AuthContext);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchUser = async () => {
-        try {
-            const response = await fetch('http://localhost:3000/users/cookie', {
-            method: 'GET',
-            credentials: 'include',
-            });
+            try {
+                const response = await fetch('http://localhost:3000/users/cookie', {
+                    method: 'GET',
+                    credentials: 'include',
+                });
 
-            if (!response.ok) {
-            logout()
-            if (response.status === 401) {
-                navigate('/login')
-                throw new Error('Unauthorized. Please log in again.');
+                if (!response.ok) {
+                    logout();
+                    if (response.status === 401) {
+                        navigate('/login');
+                        throw new Error('Unauthorized. Please log in again.');
+                    }
+                    navigate('/signup');
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.user) {
+                    setName(data.user.Name);
+                } else {
+                    throw new Error('User data not found.');
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
             }
-            navigate('/signup')
-            throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            if (data.user) { 
-            console.log(data.user)
-            setName(data.user.Name);
-            setUser(data.user);
-            } else {
-            throw new Error('User data not found.');
-            }
-        } catch (error) {
-            setError(error.message);
-            console.error('Error fetching user:', error);
-        }
         };
 
-        if (loading) return; // Don't do anything while auth is still loading
-
-        if (!isLoggedIn) {
-        navigate('/login'); 
-        } else {
-        fetchUser();
+        if (!loading && !isLoggedIn) {
+            navigate('/login');
+        } else if (isLoggedIn) {
+            fetchUser();
         }
-
-    }, [isLoggedIn, loading]); 
+    }, [isLoggedIn, loading, navigate, logout]);
 
     // Handle video file selection
     const handleChange = (event) => {
         const file = event.target.files[0];
         if (file) {
-            setVideoFile(file); // Store file in state
-            setVideoSrc(URL.createObjectURL(file)); // Generate preview URL
+            setVideoFile(file);
         }
     };
 
@@ -75,35 +65,47 @@ const Meeting = () => {
         try {
             const formData = new FormData();
             formData.append('video', videoFile);
-            formData.append('Name', name); // Include existing user data
-            formData.append('ImgPath', user.ImgPath);
+            formData.append('Name', name);
 
             const response = await fetch('http://localhost:3000/video/upload', {
                 method: 'POST',
                 credentials: 'include',
-                body: formData, // Send FormData instead of JSON
+                body: formData,
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update user');
+                throw new Error('Failed to upload video');
             }
 
             const data = await response.json();
-            Swal.fire("Success", "Video uploaded successfully", "success");
-    
-            // Redirect to watch the stream
-            setVideoSrc(data.stream_url);
+
+            // Set video stream URL (DASH Manifest)
+            if (data.stream_url) {
+                Swal.fire("Success", "Video uploaded successfully", "success");
+                setVideoSrc(data.stream_url);
+            } else {
+                console.error("No stream URL returned from backend");
+            }
         } catch (error) {
-            setError(error.message);
-            console.error('Error updating user:', error);
-            Swal.fire("Error", "Failed to update user", "error");
+            console.error('Error uploading video:', error);
+            Swal.fire("Error", "Failed to upload video", "error");
         }
     };
 
+    // Initialize the DASH player once the video source is available
+    useEffect(() => {
+        if (videoSrc) {
+            const video = document.getElementById('video-player');
+            if (video) {
+                const player = MediaPlayer.create();
+                player.initialize(video, videoSrc, true); // Initialize with the .mpd stream URL
+            }
+        }
+    }, [videoSrc]);
+
     return (
         <div className="home">
-            {error && <p className="error">{error}</p>}
-            <div className={`card ${darkMode ? 'dark' : 'light'}`}>
+            <div className="card">
                 <h2 className='center-text'>Meeting</h2>
                 <div className="form-group">
                     <label htmlFor="name">Name:</label>
@@ -111,9 +113,7 @@ const Meeting = () => {
                         type="text"
                         id="name"
                         value={name}
-                        onChange={(e) =>
-                        setName(e.target.value)
-                        }
+                        onChange={(e) => setName(e.target.value)}
                         required
                     />
                 </div>
@@ -124,15 +124,15 @@ const Meeting = () => {
                     </label>
                 </div>
 
-                {/* Show video preview */}
+                {/* Show DASH Video Player */}
                 {videoSrc && (
-                    <video controls width="100%">
-                        <source src={videoSrc} type="video/mp4" />
+                    <video id="video-player" controls width="100%">
+                        <source src={videoSrc} type="application/dash+xml" />
                         Your browser does not support the video tag.
                     </video>
                 )}
 
-                <button onClick={handleVideoUpload} className="btn">Update User</button>
+                <button onClick={handleVideoUpload} className="btn">Upload Video</button>
             </div>
         </div>
     );

@@ -40,6 +40,7 @@ func main() {
 
 	r.Static("/uploads", "./uploads")
 	r.POST("/video/upload", controllers.ConvertToMPEGTS)
+	r.POST("/video/stream", controllers.ServeDashFile)
 
 	// Protected user routes (Require authentication)
 	r.GET("/users", middleware.AuthMiddleware(), controllers.UsersIndex)

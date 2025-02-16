@@ -86,7 +86,35 @@ func JoinSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session"})
 }
 
-// Convert MP4 (or live stream) to MPEG-TS
+// ServeDashFile serves the DASH manifest file (.mpd) to the client.
+func ServeDashFile(c *gin.Context) {
+	var requestData struct {
+		UserName string `json:"userName" binding:"required"`
+		FileName string `json:"fileName" binding:"required"`
+	}
+
+	if err := c.BindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	userName := requestData.UserName
+	fileName := requestData.FileName
+
+	// Construct the file path based on the userName and fileName
+	filePath := filepath.Join("uploads", userName, "dash", fileName)
+
+	// Check if the file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	// Serve the file
+	c.File(filePath)
+}
+
+// Convert MP4 (or live stream) to MPEG-TS, then convert to MPEG-DASH
 func ConvertToMPEGTS(c *gin.Context) {
 	userName := c.PostForm("Name")
 
@@ -131,7 +159,6 @@ func convertToMPEGDASH(mpegTSPath string, userName string, c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
 		return
 	}
-	//`ffmpeg -i "%s" -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 10 -use_template 1 -use_timeline 1 -init_seg_name "init.mp4" -media_seg_name "chunk_%%04d.m4s" "%s"`,
 
 	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
 	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1  %s", mpegTSPath, mpdFilePath)
@@ -140,20 +167,12 @@ func convertToMPEGDASH(mpegTSPath string, userName string, c *gin.Context) {
 		return
 	}
 
+	// Construct the stream URL with userName and fileName (stream.mpd)
+	streamURL := "http://localhost:3000/uploads/" + userName + "/dash/stream.mpd"
+
 	// Respond with the DASH manifest URL
-	streamURL := fmt.Sprintf("http://localhost:3000/video/stream/stream.mpd")
-	c.JSON(http.StatusOK, gin.H{"message": "Video processed", "stream_url": streamURL})
-}
-
-func serveDashFile(c *gin.Context) {
-	userName := c.PostForm("Name")
-	fileName := c.Param("filename") // Get file name from URL
-	filePath := filepath.Join("uploads/"+userName+"/dash", fileName)
-
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-		return
-	}
-
-	c.File(filePath)
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Video processed",
+		"stream_url": streamURL,
+	})
 }
