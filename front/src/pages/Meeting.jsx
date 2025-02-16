@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Swal from "sweetalert2";
+import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
 import MediaPlayer from 'dashjs';
 
 const Meeting = () => {
     const [videoFile, setVideoFile] = useState(null);
-    const [videoSrc, setVideoSrc] = useState("");
-    const [name, setName] = useState("");
+    const [videoSrc, setVideoSrc] = useState('');
+    const [name, setName] = useState('');
     const { isLoggedIn, logout, loading } = useContext(AuthContext);
     const navigate = useNavigate();
+    const [uploading, setUploading] = useState(false);
+    const videoRef = useRef(null); // Ref for the video element
 
     useEffect(() => {
+        console.log("MediaPlayer:", MediaPlayer); // Add this line
         const fetchUser = async () => {
             try {
                 const response = await fetch('http://localhost:3000/users/cookie', {
@@ -47,21 +50,24 @@ const Meeting = () => {
         }
     }, [isLoggedIn, loading, navigate, logout]);
 
-    // Handle video file selection
     const handleChange = (event) => {
         const file = event.target.files[0];
-        if (file) {
+        if (file && file.type.startsWith('video/')) {
             setVideoFile(file);
+        } else {
+            Swal.fire('Error', 'Please select a valid video file', 'error');
+            event.target.value = null; // Clear the invalid selection
+            setVideoFile(null);
         }
     };
 
-    // Upload video file
     const handleVideoUpload = async () => {
         if (!videoFile) {
-            Swal.fire("Error", "Please select a video file first", "error");
+            Swal.fire('Error', 'Please select a video file first', 'error');
             return;
         }
 
+        setUploading(true);
         try {
             const formData = new FormData();
             formData.append('video', videoFile);
@@ -74,39 +80,43 @@ const Meeting = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to upload video');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to upload video');
             }
 
             const data = await response.json();
 
-            // Set video stream URL (DASH Manifest)
             if (data.stream_url) {
-                Swal.fire("Success", "Video uploaded successfully", "success");
+                Swal.fire('Success', 'Video uploaded successfully', 'success');
                 setVideoSrc(data.stream_url);
+                setVideoFile(null); // Clear the selected file
             } else {
-                console.error("No stream URL returned from backend");
+                console.error('No stream URL returned from backend');
+                Swal.fire('Error', 'Stream URL not provided by the server.', 'error');
             }
         } catch (error) {
             console.error('Error uploading video:', error);
-            Swal.fire("Error", "Failed to upload video", "error");
+            Swal.fire('Error', error.message || 'Failed to upload video', 'error');
+        } finally {
+            setUploading(false);
         }
     };
 
-    // Initialize the DASH player once the video source is available
     useEffect(() => {
-        if (videoSrc) {
-            const video = document.getElementById('video-player');
-            if (video) {
-                const player = MediaPlayer.create();
-                player.initialize(video, videoSrc, true); // Initialize with the .mpd stream URL
-            }
+        if (videoSrc && videoRef.current) {
+            const player = MediaPlayer.create();
+            player.initialize(videoRef.current, videoSrc, true);
+
+            return () => {
+                player.reset(); // Dispose of the player when the component unmounts
+            };
         }
     }, [videoSrc]);
 
     return (
         <div className="home">
             <div className="card">
-                <h2 className='center-text'>Meeting</h2>
+                <h2 className="center-text">Meeting</h2>
                 <div className="form-group">
                     <label htmlFor="name">Name:</label>
                     <input
@@ -124,15 +134,16 @@ const Meeting = () => {
                     </label>
                 </div>
 
-                {/* Show DASH Video Player */}
                 {videoSrc && (
-                    <video id="video-player" controls width="100%">
+                    <video id="video-player" controls width="100%" ref={videoRef}>
                         <source src={videoSrc} type="application/dash+xml" />
                         Your browser does not support the video tag.
                     </video>
                 )}
 
-                <button onClick={handleVideoUpload} className="btn">Upload Video</button>
+                <button onClick={handleVideoUpload} className="btn" disabled={uploading}>
+                    {uploading ? 'Uploading...' : 'Upload Video'}
+                </button>
             </div>
         </div>
     );
