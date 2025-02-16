@@ -1,4 +1,19 @@
 services:
+  front:
+    build:
+      context: ./front
+    container_name: front
+    ports:
+      - "8080:8080"
+    networks:
+      - my_network
+    volumes:
+      - ./front:/app
+    environment:
+      - API_URL=http://api-server:3000
+      - STREAMER_URL=http://streamer:4000
+      - DASHER_URL=http://dasher:5000
+
   api:
     build:
       context: ./api
@@ -13,22 +28,23 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:1234@postgres-db:5432/zoom?sslmode=disable
 
-
   streamer:
     build:
       context: ./streamer
-    container_name: streamer-service
+    container_name: streamer
     ports:
       - "4000:4000"
     networks:
       - my_network
     volumes:
       - ./streamer:/app
+    environment:
+      - DASHER_URL=http://dasher:5000
   
   dasher:
     build:
       context: ./dasher
-    container_name: dasher-service
+    container_name: dasher
     ports:
       - "5000:5000"
     networks:
@@ -38,7 +54,7 @@ services:
   
   database:
     image: postgres:13
-    container_name: postgres-db
+    container_name: postgres
     environment:
       POSTGRES_DB: zoom
       POSTGRES_USER: postgres
