@@ -1,12 +1,22 @@
 /* === NAVBAR STYLES === */
 .navbar {
-    position: sticky;
-    top: 0px;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    background-color: var(--background);
+  position: sticky;
+  top: 0px;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: var(--background);
+  box-shadow: 0 4px 8px var(--shadow-color);
+  transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.2s ease;
 }
+
+/* Hover effect */
+.navbar:hover {
+  background-color: color-mix(in srgb, var(--background) 80%, var(--toggle-bg) 10%);
+  box-shadow: 0 6px 12px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
 
 /* Flexbox Container */
 .navbar-container {
@@ -74,7 +84,7 @@
 
 /* User Greeting */
 #user {
-    font-size: larger;
+    font-size: xx-large;
     font-weight: 500;
     color: var(--text-color);
 }
@@ -150,8 +160,8 @@
   }
 
   .user-show img {
-    width: 60px;
-    height: 60px;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     margin-right: 10px;
   }
@@ -231,19 +241,6 @@
     .hamburger.active .bar:nth-child(3) {
       transform: translateY(-10px) rotate(-45deg);
     }
-  
-    /* Navbar on larger screens */
-    @media (min-width: 701px) {
-      .hamburger {
-        display: none;
-      }
-  
-      .navbar-links {
-        display: flex;
-        justify-content: flex-end;
-        gap: 20px;
-      }
-    }
   }
   
   
@@ -314,4 +311,11 @@ input:checked + .slider {
 
 input:checked + .slider:before {
     transform: translateX(22px);
+}
+
+.user-profile {
+  display: flex;
+  align-items:center;     /* Center content */
+  gap: 10px;               /* Space between items */
+  list-style: none;        /* Remove default list styles */
 }

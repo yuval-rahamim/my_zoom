@@ -1,25 +1,27 @@
-import React, { useState, useEffect,useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './CreateMeeting.css';
 import { AuthContext } from '../components/AuthContext';
 
 const CreateMeeting = () => {
-  const [WaitingRoom, setIsWaitingRoom] = useState(false)
+  const [sessionId, setSessionId] = useState("");
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
-
   const navigate = useNavigate();
-
-  const [darkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
-
-
-  const [user, setUser] = useState(null);
   const { isLoggedIn, logout, loading } = useContext(AuthContext);
+  const [user, setUser] = useState(null);
+
+  // Function to generate a random Room ID
+  const generateRoomID = (length = 10) => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
+    setSessionId(generateRoomID()); // Generate Room ID on component mount
+
+  const fetchUser = async () => {
       try {
         const response = await fetch('http://localhost:3000/users/cookie', {
           method: 'GET',
@@ -55,65 +57,46 @@ const CreateMeeting = () => {
     } else {
       fetchUser();
     }
+  }, [isLoggedIn, loading, navigate, logout]);
 
-  }, [isLoggedIn, loading]); 
-
-  const validateForm = () => {
-    // if (name.length < 2) {
-    //   setError('Name must be at least 3 characters long.');
-    //   return false;
-    // }
-    // if (password.length < 2) {
-    //   setError('Password must be at least 2 characters long.');
-    //   return false;
-    // }
-    // setError(null);
-    return true;
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(sessionId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    try {
-    //   const response = await fetch('http://localhost:3000/users/signup', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ name, password }),
-    //   });
-
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-    //   }
-
-    //   Swal.fire({
-    //     title: "Success sign up",
-    //     text: "You are now moving to sign in",
-    //     icon: "success"
-    //   });
-    //   navigate('/room');
-    } catch (error) {
-      setError(error.message);
-    }
+  const handleGenerateNewID = () => {
+    setSessionId(generateRoomID());
+    setCopied(false); // Reset "Copied!" status
   };
 
   return (
-    <div className={`card ${darkMode ? 'dark' : 'light'}`}>
-      <form onSubmit={submit} className="form">
-        <h2 className='center-text'>Create meeting</h2>
+    <div className="card">
+      <form className="form">
+        <h2 className="center-text">Create Meeting</h2>
+        
         <div className="form-group">
-            <div className="checkbox-wrapper">
-                <label className="checkbox-container">
-                    <input type="checkbox" className="checkbox-input" value={WaitingRoom} onChange={(e) => setIsWaitingRoom(e.target.value)}/>
-                    <span className="checkbox-box"></span>
-                </label>
-                <div className='check'>
-                    <label htmlFor="WaitingRoom">Waiting Room</label>
-                    <a>Only users admitted by the host can join the meeting</a>
-                </div>
-            </div>
-        </div> 
+          <label htmlFor="roomId">Room ID:</label>
+          <div className="copy-container">
+            <input
+              type="text"
+              id="roomId"
+              value={sessionId}
+              readOnly
+              className="room-input"
+            />
+            <button type="button" onClick={copyToClipboard} className="copy-btn">
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        <button type="button" onClick={handleGenerateNewID} className="generate-btn">
+          Generate New ID
+        </button>
+
         {error && <p className="error">{error}</p>}
+
         <button type="submit" className="btn">Create Room</button>
       </form>
     </div>

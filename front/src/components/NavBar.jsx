@@ -94,10 +94,16 @@ const Navbar = () => {
           ) : (
             <>
               {user && (
-                <div className='user-show'>
-                  <li> <img src={user.ImgPath} alt="Profile" /></li>
-                  <li> <Link to="/edit"><span id='user'>{user.Name || 'User'}</span></Link></li>
-                </div>
+                  <div className="user-show">
+                  <li className="user-profile">
+                    <img src={user.ImgPath} alt="Profile" />
+                    <Link to="/edit">
+                      <span id="user">
+                        {user.Name || 'User'} {user.Manager && "🧑🏻‍💻"}
+                      </span>
+                    </Link>
+                  </li>
+                  </div>
               )}
               <li>
                 <button className="Logout" onClick={handleLogout}>

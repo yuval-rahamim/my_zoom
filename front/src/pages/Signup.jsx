@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Signup.css';
 import { useNavigate, Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import Profile from '../assets/deafultProfile.avif'
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -34,7 +35,7 @@ const SignUp = () => {
       const response = await fetch('http://localhost:3000/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
+        body: JSON.stringify({ name, password, ImgPath: Profile}),
       });
 
       if (!response.ok) {

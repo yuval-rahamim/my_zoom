@@ -107,6 +107,7 @@ func UsersCreate(c *gin.Context) {
 	user := models.User{
 		Name:     account.Name,
 		Password: password,
+		ImgPath:  account.ImgPath,
 		Manager:  false,
 	}
 

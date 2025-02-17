@@ -65,20 +65,12 @@ const EditUser = () => {
           if (!targetUserData.user) {
             throw new Error("Target user data not found.");
           }
-
-          setUpdatedUser({
-            Name: targetUserData.user.Name,
-            ImgPath: targetUserData.user.ImgPath,
-            Manager: targetUserData.user.Manager,
-          });
-        } else {
-          // If editing self, set user data
-          setUpdatedUser({
-            Name: currentUserData.user.Name,
-            ImgPath: currentUserData.user.ImgPath,
-            Manager: currentUserData.user.Manager,
-          });
-        }
+        }  
+       setUpdatedUser({
+        Name: currentUserData.user.Name,
+        ImgPath: currentUserData.user.ImgPath,
+        Manager: currentUserData.user.Manager,
+       });
       } catch (error) {
         setError(error.message);
         console.error("Error fetching users:", error);

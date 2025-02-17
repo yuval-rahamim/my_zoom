@@ -23,6 +23,7 @@
   --button-hover: #1A73E8;
   --icon-color: #586069;
   --toggle-bg: #CCC;
+  --shadow-color: rgba(0, 0, 0, 0.1);
   --img-bright:0;
 }
 
@@ -40,6 +41,7 @@
   --icon-color: #C0C5CE;
   --toggle-bg: #555;
   --img-bright:0.8;
+  --shadow-color: rgba(255, 255, 255, 0.1);
   background: var(--background);
   color: var(--text-color);
 }
