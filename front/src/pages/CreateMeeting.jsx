@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './CreateMeeting.css';
@@ -21,7 +21,7 @@ const CreateMeeting = () => {
   useEffect(() => {
     setSessionId(generateRoomID()); // Generate Room ID on component mount
 
-  const fetchUser = async () => {
+    const fetchUser = async () => {
       try {
         const response = await fetch('http://localhost:3000/users/cookie', {
           method: 'GET',
@@ -29,17 +29,18 @@ const CreateMeeting = () => {
         });
 
         if (!response.ok) {
-          logout()
+          logout();
           if (response.status === 401) {
-            navigate('/login')
+            navigate('/login');
             throw new Error('Unauthorized. Please log in again.');
           }
-          navigate('/signup')
+          navigate('/signup');
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
+
         const data = await response.json();
         if (data.user) { 
-          console.log(data.user)
+          console.log(data.user);
           setUser(data.user);
         } else {
           throw new Error('User data not found.');
@@ -70,9 +71,47 @@ const CreateMeeting = () => {
     setCopied(false); // Reset "Copied!" status
   };
 
+  const handleCreateSession = async (e) => {
+    e.preventDefault();
+
+    if (!user) {
+      setError("You must be logged in to create a session.");
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/sessions/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Ensures cookies are sent with the request
+        body: JSON.stringify({ name: sessionId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create session: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      Swal.fire({
+        icon: 'success',
+        title: 'Meeting Created!',
+        text: 'Session created successfully!',
+      });
+
+      // Redirect to the meeting room
+      navigate(`/meeting/${data.session_id}`);
+      
+    } catch (error) {
+      setError(error.message);
+      console.error('Error creating session:', error);
+    }
+  };
+
   return (
     <div className="card">
-      <form className="form">
+      <form className="form" onSubmit={handleCreateSession}>
         <h2 className="center-text">Create Meeting</h2>
         
         <div className="form-group">

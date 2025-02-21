@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 	"yuval/inits"
 	"yuval/models"
@@ -25,16 +26,29 @@ func CreateSession(c *gin.Context) {
 	}
 
 	// Retrieve the user from the session
-	userID, exists := c.Get("userID")
+	userIDInterface, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// Create the session
+	// בדיקה שהערך הוא string והמרה ל- uint
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	// המרת string ל- uint
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user ID"})
+		return
+	}
+
 	session := models.Session{
 		Name:   input.Name,
-		HostID: userID.(uint),
+		HostID: uint(userIDUint), // המרת uint64 ל- uint
 		Status: "active",
 	}
 
@@ -44,6 +58,7 @@ func CreateSession(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Session created successfully", "session_id": session.ID})
+
 }
 
 // JoinSession allows a user to join a session.
