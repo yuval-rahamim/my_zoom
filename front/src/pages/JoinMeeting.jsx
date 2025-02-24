@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import './CreateMeeting.css';
 import { AuthContext } from '../components/AuthContext';
 
-const CreateMeeting = () => {
+const JoinMeeting = () => {
   const [sessionId, setSessionId] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
@@ -142,4 +142,4 @@ const CreateMeeting = () => {
   );
 };
 
-export default CreateMeeting;
+export default JoinMeeting;
