@@ -13,9 +13,8 @@ const Meeting = () => {
     const navigate = useNavigate();
     const [uploading, setUploading] = useState(false);
     const videoRef = useRef(null); // Main video ref
-    const secondVideoRef = useRef(null); // Main video ref
     const { id } = useParams(); // Get meeting ID
-    const videoRefs = useRef([]); // Create an array of refs
+    const videoRefs = useRef([]); // Array of refs for each participant
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -52,7 +51,7 @@ const Meeting = () => {
 
                 const data = await response.json();
                 console.log(data)
-                if(data.participants!=null){
+                if (data.participants != null) {
                     setParticipants(data.participants); // Ensure participants have valid video URLs
                 }
             } catch (error) {
@@ -104,7 +103,7 @@ const Meeting = () => {
             const data = await response.json();
             if (data.stream_url) {
                 Swal.fire('Success', 'Video uploaded successfully', 'success');
-                console.log(data)
+                console.log(data);
                 setVideoSrc(data.stream_url);
                 setVideoFile(null);
             } else {
@@ -126,12 +125,15 @@ const Meeting = () => {
         }
     }, [videoSrc]);
 
+    // Initialize dash.js for each participant's video stream
     useEffect(() => {
-        if (participants[0] && secondVideoRef.current) {
-            const player = dashjs.MediaPlayer().create();
-            player.initialize(secondVideoRef.current, participants[0], true);
-            return () => player.reset();
-        }
+        participants.forEach((participant, index) => {
+            if (participant && videoRefs.current[index]) {
+                const player = dashjs.MediaPlayer().create();
+                player.initialize(videoRefs.current[index], participant, true);
+                return () => player.reset(); // Clean up when unmounting
+            }
+        });
     }, [participants]);
 
     return (
@@ -168,19 +170,21 @@ const Meeting = () => {
             </div>
 
             {/* Display Participants */}
-            {participants.length > 0 &&  <div className="participants">
-                {participants.map((participant, index) => {
-                    return (
-                        <div key={index} className="participant-card">
-                            <video controls width="100%" ref={secondVideoRef}>
-                                <source src={participant} type="application/dash+xml" />
-                                Your browser does not support the video tag.
-                            </video>
-                        </div>
-                    );
-                })}
-            </div>
-            }           
+            {participants.length > 0 && (
+                <div className="participants">
+                    {participants.map((participant, index) => {
+                        return (
+                            <div className="card">
+                                <h2 title="user name" className="center-text"></h2>
+                                <video controls width="100%" ref={(el) => (videoRefs.current[index] = el)}>
+                                    <source src={participant} type="application/dash+xml" />
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
