@@ -29,7 +29,7 @@ func main() {
 		AllowOriginFunc: func(origin string) bool {
 			return true // Allow all origins dynamically
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))

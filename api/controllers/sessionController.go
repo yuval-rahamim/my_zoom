@@ -27,11 +27,12 @@ func IsUserInSession(sessionID uint, userID uint) (bool, error) {
 func GetSessionByUserID(userID uint) (uint, error) {
 	var userSession models.UserSession
 
-	// Find the user-session entry for the given userID
-	if err := inits.DB.Where("user_id = ?", userID).First(&userSession).Error; err != nil {
-		// If no session is found for the user, return an error
-		return 0, fmt.Errorf("user is not part of any session")
+	// Find the user-session entry for the given userID where left_at is NULL (i.e., the user has not left the session)
+	if err := inits.DB.Where("user_id = ? AND left_at IS NULL", userID).First(&userSession).Error; err != nil {
+		// If no session is found or the user has left the session, return an error
+		return 0, fmt.Errorf("user is not part of any active session")
 	}
+
 	// Return the session ID
 	return userSession.SessionID, nil
 }
