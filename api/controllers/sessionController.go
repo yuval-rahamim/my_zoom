@@ -14,6 +14,142 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Check if the user is part of the session
+func IsUserInSession(sessionID uint, userID uint) (bool, error) {
+	var userSession models.UserSession
+	if err := inits.DB.Where("session_id = ? AND user_id = ?", sessionID, userID).First(&userSession).Error; err != nil {
+		return false, fmt.Errorf("user is not part of this session")
+	}
+	return true, nil
+}
+
+// GetSessionByUserID checks which session the user is in and returns the session or session ID
+func GetSessionByUserID(userID uint) (uint, error) {
+	var userSession models.UserSession
+
+	// Find the user-session entry for the given userID
+	if err := inits.DB.Where("user_id = ?", userID).First(&userSession).Error; err != nil {
+		// If no session is found for the user, return an error
+		return 0, fmt.Errorf("user is not part of any session")
+	}
+	// Return the session ID
+	return userSession.SessionID, nil
+}
+
+// Get all users in a session
+func GetUsersInSession(sessionID uint) ([]models.UserSession, error) {
+	var userSessions []models.UserSession
+	if err := inits.DB.Where("session_id = ?", sessionID).Find(&userSessions).Error; err != nil {
+		return nil, fmt.Errorf("error fetching users in session: %v", err)
+	}
+	return userSessions, nil
+}
+
+// ensures that the user is exist and convert the user id into uint
+func GetValidUserID(c *gin.Context) (uint, error) {
+	userIDInterface, exists := c.Get("userID")
+	if !exists {
+		return 0, fmt.Errorf("Unauthorized")
+	}
+
+	userIDStr := fmt.Sprintf("%v", userIDInterface)
+	var user models.User
+	if err := inits.DB.Where("id = ?", userIDStr).First(&user).Error; err != nil {
+		return 0, fmt.Errorf("Unauthorized")
+	}
+
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid user ID format")
+	}
+
+	return uint(userIDUint), nil
+}
+
+// GetSessionDetails fetches session details and participants
+func GetSessionDetails(c *gin.Context) {
+	sessionID := c.Param("id")
+
+	// Check if session exists
+	var session models.Session
+	if err := inits.DB.Where("name = ?", sessionID).First(&session).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+		return
+	}
+
+	// Check if the user is part of the session
+	userID, err := GetValidUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+
+	var userSession models.UserSession
+	if err := inits.DB.Where("user_id = ? AND session_id = ?", userID, session.ID).First(&userSession).Error; err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not in this session"})
+		return
+	}
+
+	// Fetch participants (user sessions) where left_at is NULL (still active)
+	var participants []models.UserSession
+	if err := inits.DB.Where("session_id = ? AND left_at IS NULL", session.ID).Find(&participants).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch participants"})
+		return
+	}
+
+	// Fetch stream URLs for each active participant
+	var streamURLs []string
+	var users []models.User
+	for _, participant := range participants {
+		var user models.User
+		if err := inits.DB.Where("id = ?", participant.UserID).First(&user).Error; err != nil || participant.UserID == userID {
+			continue // Skip if user not found or the current user
+		}
+
+		// Construct stream URL for each participant
+		streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", session.ID, participant.UserID)
+		streamURLs = append(streamURLs, streamURL)
+
+		// Append user to the list
+		users = append(users, user)
+	}
+
+	// Respond with session details, stream URLs, users, and user sessions
+	c.JSON(http.StatusOK, gin.H{
+		"session_id":    session.ID,
+		"participants":  streamURLs,
+		"users":         users,        // List of users in the session
+		"user_sessions": participants, // List of user sessions in the session
+	})
+}
+
+// CreateUserSession ensures that a user is not in another session before joining.
+func CreateUserSession(userID uint, sessionID uint) error {
+	var existingUserSession models.UserSession
+
+	// Check if the user is already in another session
+	if err := inits.DB.Where("user_id = ? AND left_at IS NULL", userID).First(&existingUserSession).Error; err == nil {
+		// User is in an active session, force them to leave
+		existingUserSession.LeftAt = uint(time.Now().Unix())
+		if err := inits.DB.Save(&existingUserSession).Error; err != nil {
+			return fmt.Errorf("failed to leave previous session: %v", err)
+		}
+	}
+
+	// Create new user session
+	newUserSession := models.UserSession{
+		UserID:    userID,
+		SessionID: sessionID,
+		JoinedAt:  uint(time.Now().Unix()),
+	}
+
+	if err := inits.DB.Create(&newUserSession).Error; err != nil {
+		return fmt.Errorf("failed to create user session: %v", err)
+	}
+
+	return nil
+}
+
 // CreateSession handles the creation of a new session.
 func CreateSession(c *gin.Context) {
 	var input struct {
@@ -25,30 +161,15 @@ func CreateSession(c *gin.Context) {
 		return
 	}
 
-	// Retrieve the user from the session
-	userIDInterface, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	// בדיקה שהערך הוא string והמרה ל- uint
-	userIDStr, ok := userIDInterface.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	// המרת string ל- uint
-	userIDUint, err := strconv.ParseUint(userIDStr, 10, 32)
+	userID, err := GetValidUserID(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		return
 	}
 
 	session := models.Session{
 		Name:   input.Name,
-		HostID: uint(userIDUint), // המרת uint64 ל- uint
+		HostID: userID,
 		Status: "active",
 	}
 
@@ -57,14 +178,18 @@ func CreateSession(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Session created successfully", "session_id": session.ID})
+	if err := CreateUserSession(userID, session.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{"message": "Session created successfully", "session_id": session.ID})
 }
 
 // JoinSession allows a user to join a session.
 func JoinSession(c *gin.Context) {
 	var input struct {
-		SessionID uint `json:"session_id" binding:"required"`
+		Name string `json:"name" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -72,40 +197,110 @@ func JoinSession(c *gin.Context) {
 		return
 	}
 
-	// Retrieve the user from the session
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	userID, err := GetValidUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		return
 	}
 
-	// Check if session exists
 	var session models.Session
-	if err := inits.DB.First(&session, input.SessionID).Error; err != nil {
+	if err := inits.DB.Where("name = ?", input.Name).First(&session).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
 		return
 	}
 
-	// Add the user to the session
-	userSession := models.UserSession{
-		UserID:    userID.(uint),
-		SessionID: input.SessionID,
-		JoinedAt:  uint(time.Now().Unix()),
-	}
-
-	if err := inits.DB.Create(&userSession).Error; err != nil {
+	if err := CreateUserSession(userID, session.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session"})
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session", "session_id": session.ID})
+}
+
+// Convert MP4 (or live stream) to MPEG-TS, then convert to MPEG-DASH
+func ConvertToMPEGTS(c *gin.Context) {
+	userID, err := GetValidUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+
+	sessionID, err := GetSessionByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	// Parse file from request
+	file, err := c.FormFile("video")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload"})
+		return
+	}
+
+	// Create session and user directories if they do not exist
+	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+
+	// Create the session and user directories
+	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
+		return
+	}
+
+	// Save uploaded file
+	filePath := filepath.Join(userPath, file.Filename)
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	// Convert MP4 to MPEG-TS
+	mpegTSPath := filepath.Join(userPath, "output.ts")
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", filePath, mpegTSPath)
+
+	if err := utils.RunCommand(cmd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
+		return
+	}
+
+	// Convert MPEG-TS to MPEG-DASH
+	convertToMPEGDASH(mpegTSPath, sessionID, userID, c)
+}
+
+// Convert MPEG-TS to MPEG-DASH
+func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Context) {
+	// Create output directory for DASH files
+	mpegDashDir := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID), fmt.Sprintf("%d", userID), "dash")
+	if err := os.MkdirAll(mpegDashDir, os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
+		return
+	}
+
+	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
+	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpegTSPath, mpdFilePath)
+
+	if err := utils.RunCommand(cmd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
+		return
+	}
+
+	// Construct the stream URL with sessionID and userID
+	streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
+
+	// Respond with the DASH manifest URL
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Video processed",
+		"stream_url": streamURL,
+	})
 }
 
 // ServeDashFile serves the DASH manifest file (.mpd) to the client.
 func ServeDashFile(c *gin.Context) {
 	var requestData struct {
-		UserName string `json:"userName" binding:"required"`
-		FileName string `json:"fileName" binding:"required"`
+		SessionID uint   `json:"sessionID" binding:"required"`
+		UserID    uint   `json:"userID" binding:"required"`
+		FileName  string `json:"fileName" binding:"required"`
 	}
 
 	if err := c.BindJSON(&requestData); err != nil {
@@ -113,11 +308,8 @@ func ServeDashFile(c *gin.Context) {
 		return
 	}
 
-	userName := requestData.UserName
-	fileName := requestData.FileName
-
-	// Construct the file path based on the userName and fileName
-	filePath := filepath.Join("uploads", userName, "dash", fileName)
+	// Construct the file path based on the sessionID, userID, and fileName
+	filePath := filepath.Join("./uploads", fmt.Sprintf("%d", requestData.SessionID), fmt.Sprintf("%d", requestData.UserID), "dash", requestData.FileName)
 
 	// Check if the file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -127,67 +319,4 @@ func ServeDashFile(c *gin.Context) {
 
 	// Serve the file
 	c.File(filePath)
-}
-
-// Convert MP4 (or live stream) to MPEG-TS, then convert to MPEG-DASH
-func ConvertToMPEGTS(c *gin.Context) {
-	userName := c.PostForm("Name")
-
-	// Parse file from request
-	file, err := c.FormFile("video")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload"})
-		return
-	}
-
-	// Save uploaded file
-	uploadDir := filepath.Join("uploads", userName)
-	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
-		return
-	}
-
-	filePath := filepath.ToSlash(filepath.Join(uploadDir, file.Filename))
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
-		return
-	}
-
-	// Convert MP4 to MPEG-TS
-	mpegTSPath := filepath.ToSlash(filepath.Join(uploadDir, "output.ts"))
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", filePath, mpegTSPath)
-
-	if err := utils.RunCommand(cmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
-		return
-	}
-
-	// Convert MPEG-TS to MPEG-DASH
-	convertToMPEGDASH(mpegTSPath, userName, c)
-}
-
-// Convert MPEG-TS to MPEG-DASH
-func convertToMPEGDASH(mpegTSPath string, userName string, c *gin.Context) {
-	// Create output directory
-	mpegDashDir := "uploads/" + userName + "/dash"
-	if err := os.MkdirAll(mpegDashDir, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
-		return
-	}
-
-	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
-	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1  %s", mpegTSPath, mpdFilePath)
-	if err := utils.RunCommand(cmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
-		return
-	}
-
-	// Construct the stream URL with userName and fileName (stream.mpd)
-	streamURL := "http://localhost:3000/uploads/" + userName + "/dash/stream.mpd"
-
-	// Respond with the DASH manifest URL
-	c.JSON(http.StatusOK, gin.H{
-		"message":    "Video processed",
-		"stream_url": streamURL,
-	})
 }

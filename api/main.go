@@ -15,7 +15,7 @@ import (
 func init() {
 	inits.InitConfig()
 	inits.ConnectToDB()
-	inits.DB.AutoMigrate(&models.User{}, &models.Session{}) // Ensure you migrate all relevant models
+	inits.DB.AutoMigrate(&models.User{}, &models.Session{}, &models.UserSession{}) // Ensure you migrate all relevant models
 }
 
 func main() {
@@ -38,10 +38,6 @@ func main() {
 	r.POST("/users/login", controllers.Login)
 	r.POST("/users/signup", controllers.UsersCreate)
 
-	r.Static("/uploads", "./uploads")
-	r.POST("/video/upload", controllers.ConvertToMPEGTS)
-	r.POST("/video/stream", controllers.ServeDashFile)
-
 	// Protected user routes (Require authentication)
 	r.GET("/users", middleware.AuthMiddleware(), controllers.UsersIndex)
 	r.PUT("/users/update", middleware.AuthMiddleware(), controllers.UserUpdate)
@@ -52,6 +48,11 @@ func main() {
 	// Session routes (Require authentication)
 	r.POST("/sessions/create", middleware.AuthMiddleware(), controllers.CreateSession)
 	r.POST("/sessions/join", middleware.AuthMiddleware(), controllers.JoinSession)
+	r.GET("/sessions/:id", middleware.AuthMiddleware(), controllers.GetSessionDetails) // Fetch session details and participants
+
+	r.Static("/uploads", "./uploads")
+	r.POST("/video/upload", middleware.AuthMiddleware(), controllers.ConvertToMPEGTS)
+	r.POST("/video/stream", middleware.AuthMiddleware(), controllers.ServeDashFile)
 
 	// Admin routes (Require both authentication & manager check)
 	r.DELETE("/users/delete", middleware.AuthMiddleware(), middleware.ManagerMiddlewar(), controllers.UsersDelete)

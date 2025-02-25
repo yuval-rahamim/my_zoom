@@ -57,7 +57,7 @@ function Home() {
     <div className={`Home ${darkMode ? 'dark' : 'light'}`}>
         <h1>My home screen</h1>
         <div className='button-wrap'>
-          <button className='b' onClick={()=>{navigate('/m')}}>Join</button>
+          <button className='b' onClick={()=>{navigate('/joinmeeting')}}>Join</button>
           <button className='b' onClick={()=>{navigate('/createmeeting')}}>Create</button>
           <button className='b'>Friends</button>
           <button className='b' onClick={()=>{navigate('/edit')}}>Edit user</button>

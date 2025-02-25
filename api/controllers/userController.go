@@ -15,6 +15,24 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Get user details
+func User(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
+		return
+	}
+
+	userIDStr := fmt.Sprintf("%v", userID)
+	var user models.User
+	if err := inits.DB.Where("id = ?", userIDStr).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
 // Extracts user ID from JWT cookie and checks if the user is authenticated
 func GetUserIDFromToken(c *gin.Context) (string, error) {
 	// Step 1: Retrieve the JWT cookie
@@ -329,24 +347,6 @@ func UserMakeManager(c *gin.Context) {
 	}
 
 	inits.DB.Model(&user).Update("Manager", true)
-
-	c.JSON(http.StatusOK, gin.H{"user": user})
-}
-
-// Get user details
-func User(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
-		return
-	}
-
-	userIDStr := fmt.Sprintf("%v", userID)
-	var user models.User
-	if err := inits.DB.Where("id = ?", userIDStr).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
-		return
-	}
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }

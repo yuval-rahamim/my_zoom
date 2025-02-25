@@ -101,7 +101,7 @@ const CreateMeeting = () => {
       });
 
       // Redirect to the meeting room
-      navigate("/m");
+      navigate(`/m/${sessionId}`);
       
     } catch (error) {
       setError(error.message);

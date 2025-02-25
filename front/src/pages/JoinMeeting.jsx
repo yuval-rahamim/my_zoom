@@ -6,21 +6,12 @@ import { AuthContext } from '../components/AuthContext';
 
 const JoinMeeting = () => {
   const [sessionId, setSessionId] = useState("");
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { isLoggedIn, logout, loading } = useContext(AuthContext);
   const [user, setUser] = useState(null);
 
-  // Function to generate a random Room ID
-  const generateRoomID = (length = 10) => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  };
-
   useEffect(() => {
-    setSessionId(generateRoomID()); // Generate Room ID on component mount
-
     const fetchUser = async () => {
       try {
         const response = await fetch('http://localhost:3000/users/cookie', {
@@ -40,7 +31,6 @@ const JoinMeeting = () => {
 
         const data = await response.json();
         if (data.user) { 
-          console.log(data.user);
           setUser(data.user);
         } else {
           throw new Error('User data not found.');
@@ -51,8 +41,7 @@ const JoinMeeting = () => {
       }
     };
 
-    if (loading) return; // Don't do anything while auth is still loading
-
+    if (loading) return; 
     if (!isLoggedIn) {
       navigate('/login'); 
     } else {
@@ -60,83 +49,75 @@ const JoinMeeting = () => {
     }
   }, [isLoggedIn, loading, navigate, logout]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(sessionId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setSessionId(text);
+    } catch (err) {
+      console.error('Failed to read clipboard: ', err);
+    }
   };
 
-  const handleGenerateNewID = () => {
-    setSessionId(generateRoomID());
-    setCopied(false); // Reset "Copied!" status
-  };
-
-  const handleCreateSession = async (e) => {
+  const handleJoinSession = async (e) => {
     e.preventDefault();
-
-    if (!user) {
-      setError("You must be logged in to create a session.");
+    
+    if (!sessionId.trim()) {
+      setError("Please enter a valid session ID.");
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:3000/sessions/create', {
+      const response = await fetch(`http://localhost:3000/sessions/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Ensures cookies are sent with the request
+        credentials: 'include',
         body: JSON.stringify({ name: sessionId }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create session: ${response.statusText}`);
+        throw new Error(`Failed to join session: ${response.statusText}`);
       }
 
-      const data = await response.json();
       Swal.fire({
         icon: 'success',
-        title: 'Meeting Created!',
-        text: 'Session created successfully!',
+        title: 'Joined Successfully!',
+        text: 'You have joined the meeting.',
       });
 
-      // Redirect to the meeting room
-      navigate("/m");
-      
+      navigate(`/m/${sessionId}`);
     } catch (error) {
       setError(error.message);
-      console.error('Error creating session:', error);
+      console.error('Error joining session:', error);
     }
   };
 
   return (
     <div className="card">
-      <form className="form" onSubmit={handleCreateSession}>
-        <h2 className="center-text">Create Meeting</h2>
+      <form className="form" onSubmit={handleJoinSession}>
+        <h2 className="center-text">Join Meeting</h2>
         
         <div className="form-group">
-          <label htmlFor="roomId">Room ID:</label>
+          <label htmlFor="roomId">Session ID:</label>
           <div className="copy-container">
             <input
               type="text"
               id="roomId"
               value={sessionId}
-              readOnly
+              onChange={(e) => setSessionId(e.target.value)}
               className="room-input"
+              placeholder="Paste or enter session ID"
             />
-            <button type="button" onClick={copyToClipboard} className="copy-btn">
-              {copied ? "Copied!" : "Copy"}
+            <button type="button" onClick={pasteFromClipboard} className="paste-btn">
+              Paste
             </button>
           </div>
         </div>
 
-        <button type="button" onClick={handleGenerateNewID} className="generate-btn">
-          Generate New ID
-        </button>
-
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" className="btn">Create Room</button>
+        <button type="submit" className="btn">Join Room</button>
       </form>
     </div>
   );

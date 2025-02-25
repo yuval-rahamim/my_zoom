@@ -7,6 +7,7 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import SignUp from './pages/Signup.jsx';
 import CreateMeeting from './pages/CreateMeeting.jsx'
+import JoinMeeting from './pages/JoinMeeting.jsx'
 import EditUser from './pages/EditUser.jsx'
 import Meeting from './pages/Meeting.jsx'
 import {AuthProvider} from './components/AuthContext'
@@ -25,8 +26,9 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/createmeeting" element={<CreateMeeting />}></Route>
+              <Route path="/joinmeeting" element={<JoinMeeting />}></Route>
               <Route path="/edit/:name?" element={<EditUser />} />
-              <Route path="/m" element={<Meeting />}></Route>
+              <Route path="/m/:id?" element={<Meeting />}></Route>
             </Routes>
           </div>
         </AuthProvider>
