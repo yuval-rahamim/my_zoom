@@ -116,25 +116,18 @@ const Meeting = () => {
         }
     };
 
-    // Initialize dash.js for the main video
-    useEffect(() => {
-        if (videoSrc && videoRef.current) {
-            const player = dashjs.MediaPlayer().create();
-            player.initialize(videoRef.current, videoSrc, true);
-            return () => player.reset();
-        }
-    }, [videoSrc]);
+
 
     // Initialize dash.js for each participant's video stream
     useEffect(() => {
         participants.forEach((participant, index) => {
-            if (participant && videoRefs.current[index]) {
+            if (participant.streamURL && videoRefs.current[index]) {
                 const player = dashjs.MediaPlayer().create();
-                player.initialize(videoRefs.current[index], participant, true);
+                player.initialize(videoRefs.current[index], participant.streamURL, true);
                 return () => player.reset(); // Clean up when unmounting
             }
         });
-    }, [participants]);
+    }, [participants,videoSrc]);
 
     return (
         <div className="home">
@@ -157,13 +150,6 @@ const Meeting = () => {
                     </label>
                 </div>
 
-                {videoSrc && (
-                    <video id="video-player" controls width="100%" ref={videoRef}>
-                        <source src={videoSrc} type="application/dash+xml" />
-                        Your browser does not support the video tag.
-                    </video>
-                )}
-
                 <button onClick={handleVideoUpload} className="btn" disabled={uploading}>
                     {uploading ? 'Uploading...' : 'Upload Video'}
                 </button>
@@ -174,10 +160,10 @@ const Meeting = () => {
                 <div className="participants">
                     {participants.map((participant, index) => {
                         return (
-                            <div className="card">
-                                <h2 title="user name" className="center-text"></h2>
+                            <div key={participant.id} className="card">
+                                <h2 title="user name" className="center-text">{participant.name}</h2>
                                 <video controls width="100%" ref={(el) => (videoRefs.current[index] = el)}>
-                                    <source src={participant} type="application/dash+xml" />
+                                    <source src={participant.streamURL} type="application/dash+xml" />
                                     Your browser does not support the video tag.
                                 </video>
                             </div>

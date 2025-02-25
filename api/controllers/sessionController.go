@@ -98,29 +98,48 @@ func GetSessionDetails(c *gin.Context) {
 		return
 	}
 
-	// Fetch stream URLs for each active participant
-	var streamURLs []string
-	var users []models.User
+	// Prepare a list to hold the response data
+	var response []map[string]interface{}
+
+	// Add the current user as the first item
+	var currentUser models.User
+	if err := inits.DB.Where("id = ?", userID).First(&currentUser).Error; err == nil {
+		// Construct stream URL for the current user
+		currentUserStreamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", session.ID, userID)
+		response = append(response, map[string]interface{}{
+			"streamURL": currentUserStreamURL,
+			"name":      currentUser.Name,
+			"id":        currentUser.ID,
+		})
+	}
+
+	// Fetch and add other participants
 	for _, participant := range participants {
+		// Skip the current user as they've already been added
+		if participant.UserID == userID {
+			continue
+		}
+
 		var user models.User
-		if err := inits.DB.Where("id = ?", participant.UserID).First(&user).Error; err != nil || participant.UserID == userID {
-			continue // Skip if user not found or the current user
+		if err := inits.DB.Where("id = ?", participant.UserID).First(&user).Error; err != nil {
+			continue // Skip if user not found
 		}
 
 		// Construct stream URL for each participant
 		streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", session.ID, participant.UserID)
-		streamURLs = append(streamURLs, streamURL)
 
-		// Append user to the list
-		users = append(users, user)
+		// Add the participant to the response
+		response = append(response, map[string]interface{}{
+			"streamURL": streamURL,
+			"name":      user.Name,
+			"id":        user.ID,
+		})
 	}
 
-	// Respond with session details, stream URLs, users, and user sessions
+	// Respond with session details, including stream URLs and user details
 	c.JSON(http.StatusOK, gin.H{
-		"session_id":    session.ID,
-		"participants":  streamURLs,
-		"users":         users,        // List of users in the session
-		"user_sessions": participants, // List of user sessions in the session
+		"session_id":   session.ID,
+		"participants": response, // This is the new list with the current user first
 	})
 }
 
