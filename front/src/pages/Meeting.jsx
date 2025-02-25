@@ -52,7 +52,9 @@ const Meeting = () => {
 
                 const data = await response.json();
                 console.log(data)
-                setParticipants(data.participants); // Ensure participants have valid video URLs
+                if(data.participants!=null){
+                    setParticipants(data.participants); // Ensure participants have valid video URLs
+                }
             } catch (error) {
                 console.error('Error fetching session details:', error);
             }
@@ -166,7 +168,7 @@ const Meeting = () => {
             </div>
 
             {/* Display Participants */}
-            <div className="participants">
+            {participants.length > 0 &&  <div className="participants">
                 {participants.map((participant, index) => {
                     return (
                         <div key={index} className="participant-card">
@@ -178,6 +180,7 @@ const Meeting = () => {
                     );
                 })}
             </div>
+            }           
         </div>
     );
 };
