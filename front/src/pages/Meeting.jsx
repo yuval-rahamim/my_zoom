@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
+import './Meeting.css'
 import * as dashjs from 'dashjs';
 
 const Meeting = () => {
@@ -12,7 +13,6 @@ const Meeting = () => {
     const { isLoggedIn, logout, loading } = useContext(AuthContext);
     const navigate = useNavigate();
     const [uploading, setUploading] = useState(false);
-    const videoRef = useRef(null); // Main video ref
     const { id } = useParams(); // Get meeting ID
     const videoRefs = useRef([]); // Array of refs for each participant
 
@@ -116,8 +116,6 @@ const Meeting = () => {
         }
     };
 
-
-
     // Initialize dash.js for each participant's video stream
     useEffect(() => {
         participants.forEach((participant, index) => {
@@ -134,22 +132,11 @@ const Meeting = () => {
             <div className="card">
                 <h2 title="Meeting id" className="center-text">{id}</h2>
                 <div className="form-group">
-                    <label htmlFor="name">Name:</label>
-                    <input
-                        type="text"
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                    />
-                </div>
-                <div className="form-group">
                     <label>
                         Upload Video:
                         <input type="file" accept="video/mp4" onChange={handleChange} />
                     </label>
                 </div>
-
                 <button onClick={handleVideoUpload} className="btn" disabled={uploading}>
                     {uploading ? 'Uploading...' : 'Upload Video'}
                 </button>

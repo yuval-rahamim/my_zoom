@@ -109,9 +109,7 @@ const JoinMeeting = () => {
               className="room-input"
               placeholder="Paste or enter session ID"
             />
-            <button type="button" onClick={pasteFromClipboard} className="paste-btn">
-              Paste
-            </button>
+            <button type="button" onClick={pasteFromClipboard} className="paste-btn">Paste</button>
           </div>
         </div>
 

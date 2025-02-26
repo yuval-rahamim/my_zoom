@@ -277,7 +277,7 @@ func ConvertToMPEGTS(c *gin.Context) {
 
 	// Convert MP4 to MPEG-TS
 	mpegTSPath := filepath.Join(userPath, "output.ts")
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", filePath, mpegTSPath)
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://235.235.235.235:555", filePath)
 
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
@@ -298,12 +298,21 @@ func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Co
 	}
 
 	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
-	cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpegTSPath, mpdFilePath)
+	go func() {
+		cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpdFilePath)
 
-	if err := utils.RunCommand(cmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
-		return
-	}
+		if err := utils.RunCommand(cmd); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
+			return
+		}
+
+	}()
+	// cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpdFilePath)
+
+	// if err := utils.RunCommand(cmd); err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
+	// 	return
+	// }
 
 	// Construct the stream URL with sessionID and userID
 	streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
