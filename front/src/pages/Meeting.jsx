@@ -159,10 +159,12 @@ const Meeting = () => {
             if (participant.streamURL && videoRefs.current[index]) {
                 const player = dashjs.MediaPlayer().create();
                 player.initialize(videoRefs.current[index], participant.streamURL, true);
-                return () => player.reset(); // Clean up when unmounting
+
+                // Cleanup function for dash.js player
+                return () => player.reset();
             }
         });
-    }, [participants, videoSrc]);
+    }, [participants]); // Only trigger when participants change
 
     return (
         <div className="home">

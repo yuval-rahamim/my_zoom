@@ -15,6 +15,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Function to generate a multicast address based on session ID
+func generateMulticastIP(sessionID uint) string {
+	part2 := sessionID % 256                 // Session ID mapped to first byte (0-255)
+	part3 := (sessionID / 256) % 256         // Second byte
+	part4 := (sessionID / (256 * 256)) % 256 // Third byte
+
+	return fmt.Sprintf("239.%d.%d.%d", part2, part3, part4)
+}
+
 // Check if the user is part of the session
 func IsUserInSession(sessionID uint, userID uint) (bool, error) {
 	var userSession models.UserSession
@@ -24,18 +33,25 @@ func IsUserInSession(sessionID uint, userID uint) (bool, error) {
 	return true, nil
 }
 
-// GetSessionByUserID checks which session the user is in and returns the session or session ID
-func GetSessionByUserID(userID uint) (uint, error) {
+// GetSessionByUserID checks which session the user is in and returns the session ID and mcAddr
+func GetSessionByUserID(userID uint) (uint, string, error) {
 	var userSession models.UserSession
 
 	// Find the user-session entry for the given userID where left_at is NULL (i.e., the user has not left the session)
 	if err := inits.DB.Where("user_id = ? AND left_at IS NULL", userID).First(&userSession).Error; err != nil {
 		// If no session is found or the user has left the session, return an error
-		return 0, fmt.Errorf("user is not part of any active session")
+		return 0, "", fmt.Errorf("user is not part of any active session")
 	}
 
-	// Return the session ID
-	return userSession.SessionID, nil
+	// Retrieve the session to get mcAddr
+	var session models.Session
+	if err := inits.DB.Where("id = ?", userSession.SessionID).First(&session).Error; err != nil {
+		// If session is not found, return an error
+		return 0, "", fmt.Errorf("session not found")
+	}
+
+	// Return the session ID and mcAddr
+	return session.ID, session.McAddr, nil
 }
 
 // Get all users in a session
@@ -188,22 +204,45 @@ func CreateSession(c *gin.Context) {
 		return
 	}
 
+	// Initially, create a session without the multicast address
 	session := models.Session{
 		Name:   input.Name,
 		HostID: userID,
 		Status: "active",
 	}
 
+	// Create the session in the database to generate an ID (id should auto-increment)
 	if err := inits.DB.Create(&session).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Now that the session has an ID, generate and assign the multicast address
+	var existingSession models.Session
+	for {
+		// Generate the multicast IP based on the session ID
+		mcAddr := generateMulticastIP(session.ID)
+		// Check if this address is already in use
+		result := inits.DB.Where("mc_addr = ?", mcAddr).First(&existingSession)
+		if result.Error != nil { // No existing session with the same multicast address
+			session.McAddr = mcAddr
+			break
+		}
+	}
+
+	// Update the session with the multicast address
+	if err := inits.DB.Save(&session).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session with multicast address"})
+		return
+	}
+
+	// Create the user-session link
 	if err := CreateUserSession(userID, session.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Respond with the session creation success
 	c.JSON(http.StatusOK, gin.H{"message": "Session created successfully", "session_id": session.ID})
 }
 
@@ -250,7 +289,7 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
-	sessionID, err := GetSessionByUserID(userID)
+	sessionID, mcAddr, err := GetSessionByUserID(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
@@ -285,8 +324,7 @@ func ConvertToMPEGTS(c *gin.Context) {
 	websocket.BroadcastMessage(sessionID, message)
 
 	// Convert MP4 to MPEG-TS
-	mpegTSPath := filepath.Join(userPath, "output.ts")
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://235.235.235.235:555", filePath)
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://%s:555", filePath, mcAddr)
 
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
@@ -298,11 +336,11 @@ func ConvertToMPEGTS(c *gin.Context) {
 	websocket.BroadcastMessage(sessionID, message)
 
 	// Convert MPEG-TS to MPEG-DASH
-	convertToMPEGDASH(mpegTSPath, sessionID, userID, c)
+	convertToMPEGDASH(sessionID, userID, mcAddr, c)
 }
 
 // Convert MPEG-TS to MPEG-DASH and notify users via WebSocket
-func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Context) {
+func convertToMPEGDASH(sessionID uint, userID uint, mcAddr string, c *gin.Context) {
 	// Create output directory for DASH files
 	mpegDashDir := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID), fmt.Sprintf("%d", userID), "dash")
 	if err := os.MkdirAll(mpegDashDir, os.ModePerm); err != nil {
@@ -310,32 +348,49 @@ func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Co
 		return
 	}
 
-	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
+	// Acknowledge the start of video processing
+	message := fmt.Sprintf("Started processing video for user %d. Please wait...", userID)
+	websocket.BroadcastMessage(sessionID, message)
 
-	// Use a goroutine to run the conversion asynchronously
+	// Run the conversion in a goroutine to keep it asynchronous
 	go func() {
-		// Run FFmpeg command to convert MPEG-TS to MPEG-DASH
-		cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpdFilePath)
+		mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
+		cmd := fmt.Sprintf("ffmpeg -i udp://%s:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mcAddr, mpdFilePath)
 
+		// Run the conversion command and check if it was successful
 		if err := utils.RunCommand(cmd); err != nil {
-			// Send error response via WebSocket if conversion fails
-			message := fmt.Sprintf("Error converting to MPEG-DASH for user %d: %v", userID, err)
-			websocket.BroadcastMessage(sessionID, message)
+			// If conversion fails, send an error message via WebSocket
+			errorMessage := fmt.Sprintf("Error converting to MPEG-DASH for user %d: %v", userID, err)
+			websocket.BroadcastMessage(sessionID, errorMessage)
 			return
 		}
 
-		// Broadcast the completion of DASH conversion
-		message := fmt.Sprintf("Video processed to MPEG-DASH and ready for streaming for user %d.", userID)
-		websocket.BroadcastMessage(sessionID, message)
+		// After successful conversion, check if the .mpd file exists
+		if _, err := os.Stat(mpdFilePath); os.IsNotExist(err) {
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-DASH file not created for user %d", userID))
+			return
+		}
+
+		// Notify about successful conversion
+		successMessage := fmt.Sprintf("Video processed to MPEG-DASH and ready for streaming for user %d.", userID)
+		websocket.BroadcastMessage(sessionID, successMessage)
+
+		// Construct the stream URL with sessionID and userID
+		streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
+
+		// After conversion completes, send a response to the client with the stream URL
+		// In this case, we need to send the response to the user, but it can't be done directly
+		// from within the goroutine because the Gin context is not available there.
+		// So, we need some way to notify the client via WebSocket or another mechanism
+		// (such as updating the database or using another channel).
+
+		// Here, we're assuming a WebSocket broadcast or using a notification system.
+		websocket.BroadcastMessage(sessionID, fmt.Sprintf("Stream URL: %s", streamURL))
 	}()
 
-	// Construct the stream URL with sessionID and userID
-	streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
-
-	// Respond with the DASH manifest URL
+	// Immediate response indicating the process is ongoing
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Video processed",
-		"stream_url": streamURL,
+		"message": "Video processing started. Please wait for the conversion to complete.",
 	})
 }
 
