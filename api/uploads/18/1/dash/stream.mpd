@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="urn:mpeg:dash:schema:mpd:2011"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	xsi:schemaLocation="urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
+	profiles="urn:mpeg:dash:profile:isoff-live:2011"
+	type="dynamic"
+	minimumUpdatePeriod="PT20S"
+	suggestedPresentationDelay="PT20S"
+	availabilityStartTime="2025-02-27T09:03:14.654Z"
+	publishTime="2025-02-27T09:16:00.933Z"
+	maxSegmentDuration="PT20.0S"
+	minBufferTime="PT40.5S">
+	<ProgramInformation>
+	</ProgramInformation>
+	<ServiceDescription id="0">
+	</ServiceDescription>
+	<Period id="0" start="PT0.0S">
+		<AdaptationSet id="0" contentType="video" startWithSAP="1" segmentAlignment="true" bitstreamSwitching="true" frameRate="24000/1001" maxWidth="480" maxHeight="360" par="4:3">
+			<Representation id="0" mimeType="video/mp4" codecs="avc1.640015" bandwidth="1000000" width="480" height="360" sar="1:1">
+				<SegmentTemplate timescale="24000" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
+					<SegmentTimeline>
+						<S t="0" d="525525" />
+						<S d="507507" />
+						<S d="497497" />
+						<S d="480480" />
+						<S d="504504" />
+						<S d="524524" />
+						<S d="509509" />
+						<S d="508508" />
+						<S d="510510" />
+						<S d="502502" />
+						<S d="498498" />
+						<S d="486486" />
+						<S d="566566" />
+						<S d="481481" />
+						<S d="515515" />
+						<S d="496496" />
+						<S d="501501" />
+						<S d="502502" />
+						<S d="488488" />
+						<S d="489489" />
+						<S d="500500" />
+						<S d="501501" />
+						<S d="506506" />
+						<S d="500500" />
+						<S d="480480" />
+						<S d="544544" />
+						<S d="480480" />
+						<S d="506506" />
+						<S d="508508" />
+						<S d="485485" />
+						<S d="487487" />
+						<S d="490490" />
+						<S d="485485" />
+						<S d="501501" />
+						<S d="511511" />
+						<S d="503503" />
+						<S d="485485" />
+						<S d="490490" />
+						<S d="504504" />
+						<S d="619619" />
+						<S d="492492" />
+						<S d="504504" />
+						<S d="480480" />
+						<S d="504504" />
+						<S d="499499" />
+						<S d="481481" />
+						<S d="501501" />
+						<S d="511511" />
+						<S d="495495" />
+						<S d="502502" />
+						<S d="509509" />
+						<S d="503503" />
+						<S d="511511" />
+						<S d="516516" />
+						<S d="507507" />
+						<S d="497497" />
+						<S d="480480" />
+						<S d="504504" />
+						<S d="524524" />
+						<S d="509509" />
+						<S d="508508" />
+						<S d="510510" />
+						<S d="502502" />
+						<S d="498498" />
+						<S d="486486" />
+					</SegmentTimeline>
+				</SegmentTemplate>
+			</Representation>
+		</AdaptationSet>
+		<AdaptationSet id="1" contentType="audio" startWithSAP="1" segmentAlignment="true" bitstreamSwitching="true" lang="und">
+			<Representation id="1" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="128000" audioSamplingRate="44100">
+				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2" />
+				<SegmentTemplate timescale="44100" initialization="init-stream$RepresentationID$.m4s" media="chunk-stream$RepresentationID$-$Number%05d$.m4s" startNumber="1">
+					<SegmentTimeline>
+						<S t="0" d="881664" />
+						<S d="882688" r="11" />
+						<S d="882753" />
+						<S d="882689" />
+						<S d="882687" />
+						<S d="882688" r="10" />
+						<S d="882753" />
+						<S d="882688" r="9" />
+						<S d="882689" />
+						<S d="882688" />
+						<S d="882687" />
+						<S d="882754" />
+						<S d="882688" r="1" />
+						<S d="882687" />
+						<S d="882688" r="7" />
+						<S d="882689" />
+						<S d="882688" />
+						<S d="882753" />
+						<S d="882688" r="3" />
+						<S d="882687" />
+						<S d="882688" r="5" />
+						<S d="882689" />
+						<S d="882688" />
+					</SegmentTimeline>
+				</SegmentTemplate>
+			</Representation>
+		</AdaptationSet>
+	</Period>
+</MPD>

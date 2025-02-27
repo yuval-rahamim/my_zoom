@@ -6,6 +6,7 @@ import (
 	"yuval/inits"
 	"yuval/middleware"
 	"yuval/models"
+	"yuval/websocket" // Import WebSocket package
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,12 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+
+	// Initialize WebSocket Hub and start handling messages
+	go websocket.HandleMessages()
+
+	// WebSocket route
+	r.GET("/ws", middleware.AuthMiddleware(), websocket.HandleConnections)
 
 	// Public routes
 	r.POST("/users/login", controllers.Login)

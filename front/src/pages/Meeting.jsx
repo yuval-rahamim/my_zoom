@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
-import './Meeting.css'
+import './Meeting.css';
 import * as dashjs from 'dashjs';
 
 const Meeting = () => {
@@ -13,9 +13,11 @@ const Meeting = () => {
     const { isLoggedIn, logout, loading } = useContext(AuthContext);
     const navigate = useNavigate();
     const [uploading, setUploading] = useState(false);
-    const { id } = useParams(); // Get meeting ID
+    const { id } = useParams(); // Get meeting ID from URL
     const videoRefs = useRef([]); // Array of refs for each participant
+    const [socket, setSocket] = useState(null); // WebSocket state
 
+    // Fetch user and session details on mount
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -50,7 +52,6 @@ const Meeting = () => {
                 }
 
                 const data = await response.json();
-                console.log(data)
                 if (data.participants != null) {
                     setParticipants(data.participants); // Ensure participants have valid video URLs
                 }
@@ -59,6 +60,7 @@ const Meeting = () => {
             }
         };
 
+        // Check login status and fetch details
         if (!loading && !isLoggedIn) {
             navigate('/login');
         } else if (isLoggedIn) {
@@ -66,6 +68,41 @@ const Meeting = () => {
             fetchSessionDetails();
         }
     }, [isLoggedIn, loading, navigate, logout, id]);
+
+    // Set up WebSocket connection without session ID in URL
+    useEffect(() => {
+        const socket = new WebSocket("ws://localhost:3000/ws"); // WebSocket URL no longer contains sessionID
+        socket.onopen = () => {
+            console.log('WebSocket connection established');
+        };
+
+        socket.onmessage = (event) => {
+            const message = event.data;
+            console.log('Received message:', message);
+
+            // Handle join message
+            if (message.includes('has joined')) {
+                Swal.fire('New Participant', message, 'info');
+                // You can refresh the participants list or append new participant here
+                fetchSessionDetails(); // Optionally fetch session details to get the latest participant list
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.log('WebSocket error:', error);
+        };
+
+        socket.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        setSocket(socket);
+
+        // Cleanup WebSocket connection when the component unmounts
+        return () => {
+            socket.close();
+        };
+    }, [id]);
 
     const handleChange = (event) => {
         const file = event.target.files[0];
@@ -125,7 +162,7 @@ const Meeting = () => {
                 return () => player.reset(); // Clean up when unmounting
             }
         });
-    }, [participants,videoSrc]);
+    }, [participants, videoSrc]);
 
     return (
         <div className="home">

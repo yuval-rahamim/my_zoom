@@ -9,6 +9,7 @@ type Session struct {
 	Host         User          `gorm:"foreignKey:HostID"`
 	Status       string        `gorm:"default:'active'"`     // Can be 'active' or 'ended'.
 	UserSessions []UserSession `gorm:"foreignKey:SessionID"` // Relationship with user sessions.
+	Mcaddr       string        //Multicast address
 }
 
 // type SessionStream struct {
@@ -30,5 +31,4 @@ type UserSession struct {
 	LeftAt    uint    `gorm:"default:NULL"`   // The time when the user leaves the session.
 	User      User    `gorm:"foreignKey:UserID"`
 	Session   Session `gorm:"foreignKey:SessionID"`
-	mcaddr    string  //Multicast address
 }

@@ -10,6 +10,7 @@ import (
 	"yuval/inits"
 	"yuval/models"
 	"yuval/utils"
+	"yuval/websocket"
 
 	"github.com/gin-gonic/gin"
 )
@@ -234,6 +235,10 @@ func JoinSession(c *gin.Context) {
 		return
 	}
 
+	// Broadcast to all clients in the session that a new user has joined
+	message := fmt.Sprintf("User %d has joined the session %s", userID, session.Name)
+	websocket.BroadcastMessage(session.ID, message)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session", "session_id": session.ID})
 }
 
@@ -275,6 +280,10 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
+	// Broadcast the video processing start message to the session
+	message := fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename)
+	websocket.BroadcastMessage(sessionID, message)
+
 	// Convert MP4 to MPEG-TS
 	mpegTSPath := filepath.Join(userPath, "output.ts")
 	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://235.235.235.235:555", filePath)
@@ -284,11 +293,15 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
+	// Broadcast the completion of the conversion
+	message = fmt.Sprintf("Video %s converted to MPEG-TS and processing started for DASH", file.Filename)
+	websocket.BroadcastMessage(sessionID, message)
+
 	// Convert MPEG-TS to MPEG-DASH
 	convertToMPEGDASH(mpegTSPath, sessionID, userID, c)
 }
 
-// Convert MPEG-TS to MPEG-DASH
+// Convert MPEG-TS to MPEG-DASH and notify users via WebSocket
 func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Context) {
 	// Create output directory for DASH files
 	mpegDashDir := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID), fmt.Sprintf("%d", userID), "dash")
@@ -298,21 +311,23 @@ func convertToMPEGDASH(mpegTSPath string, sessionID uint, userID uint, c *gin.Co
 	}
 
 	mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
+
+	// Use a goroutine to run the conversion asynchronously
 	go func() {
+		// Run FFmpeg command to convert MPEG-TS to MPEG-DASH
 		cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpdFilePath)
 
 		if err := utils.RunCommand(cmd); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
+			// Send error response via WebSocket if conversion fails
+			message := fmt.Sprintf("Error converting to MPEG-DASH for user %d: %v", userID, err)
+			websocket.BroadcastMessage(sessionID, message)
 			return
 		}
 
+		// Broadcast the completion of DASH conversion
+		message := fmt.Sprintf("Video processed to MPEG-DASH and ready for streaming for user %d.", userID)
+		websocket.BroadcastMessage(sessionID, message)
 	}()
-	// cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mpdFilePath)
-
-	// if err := utils.RunCommand(cmd); err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg DASH conversion failed"})
-	// 	return
-	// }
 
 	// Construct the stream URL with sessionID and userID
 	streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
