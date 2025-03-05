@@ -17,11 +17,7 @@ import (
 
 // Function to generate a multicast address based on session ID
 func generateMulticastIP(sessionID uint) string {
-	part2 := sessionID % 256                 // Session ID mapped to first byte (0-255)
-	part3 := (sessionID / 256) % 256         // Second byte
-	part4 := (sessionID / (256 * 256)) % 256 // Third byte
-
-	return fmt.Sprintf("239.%d.%d.%d", part2, part3, part4)
+	return fmt.Sprintf("239.255.255.%d", sessionID)
 }
 
 // Check if the user is part of the session
@@ -281,7 +277,7 @@ func JoinSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session", "session_id": session.ID})
 }
 
-// Convert MP4 (or live stream) to MPEG-TS, then convert to MPEG-DASH
+// ConvertToMPEGTS processes an uploaded MP4 file into MPEG-TS locally
 func ConvertToMPEGTS(c *gin.Context) {
 	userID, err := GetValidUserID(c)
 	if err != nil {
@@ -289,9 +285,9 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
-	sessionID, mcAddr, err := GetSessionByUserID(userID)
+	sessionID, _, err := GetSessionByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -302,99 +298,149 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
-	// Create session and user directories if they do not exist
+	// Define file paths
 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+	mpegTSPath := filepath.Join(userPath, "video.ts")
 
-	// Create the session and user directories
+	// Create directories if they do not exist
 	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
 		return
 	}
 
-	// Save uploaded file
-	filePath := filepath.Join(userPath, file.Filename)
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
+	// Save uploaded MP4 file
+	mp4FilePath := filepath.Join(userPath, file.Filename)
+	if err := c.SaveUploadedFile(file, mp4FilePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
 
-	// Broadcast the video processing start message to the session
-	message := fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename)
-	websocket.BroadcastMessage(sessionID, message)
+	// Notify session about video processing start
+	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename))
 
-	// Convert MP4 to MPEG-TS
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://%s:555", filePath, mcAddr)
+	// Convert MP4 to MPEG-TS (locally)
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", mp4FilePath, mpegTSPath)
 
 	if err := utils.RunCommand(cmd); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
 		return
 	}
 
-	// Broadcast the completion of the conversion
-	message = fmt.Sprintf("Video %s converted to MPEG-TS and processing started for DASH", file.Filename)
-	websocket.BroadcastMessage(sessionID, message)
-
-	// Convert MPEG-TS to MPEG-DASH
-	convertToMPEGDASH(sessionID, userID, mcAddr, c)
-}
-
-// Convert MPEG-TS to MPEG-DASH and notify users via WebSocket
-func convertToMPEGDASH(sessionID uint, userID uint, mcAddr string, c *gin.Context) {
-	// Create output directory for DASH files
-	mpegDashDir := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID), fmt.Sprintf("%d", userID), "dash")
-	if err := os.MkdirAll(mpegDashDir, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
+	// Verify that the TS file was created
+	if _, err := os.Stat(mpegTSPath); os.IsNotExist(err) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "MPEG-TS file not created"})
 		return
 	}
+
+	// Notify session that TS conversion is complete
+	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d, MPEG-TS conversion complete. Please start the MPEG-DASH conversion.", userID))
+
+	// Respond to client
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Video processed to MPEG-TS. Please proceed with DASH conversion.",
+	})
+}
+
+// ConvertToMPEGDASH processes the MPEG-TS file to MPEG-DASH locally
+func ConvertToMPEGDASH(c *gin.Context) {
+	// Retrieve the userID from the context (e.g., from a session or JWT)
+	userID, err := GetValidUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+
+	// Retrieve sessionID from the context or database
+	sessionID, _, err := GetSessionByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Define paths for the TS file (MPEG-TS should have been created previously)
+	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+	mpegTSPath := filepath.Join(userPath, "video.ts") // Path to the MPEG-TS file from previous conversion
 
 	// Acknowledge the start of video processing
 	message := fmt.Sprintf("Started processing video for user %d. Please wait...", userID)
 	websocket.BroadcastMessage(sessionID, message)
 
-	// Run the conversion in a goroutine to keep it asynchronous
-	go func() {
-		mpdFilePath := filepath.Join(mpegDashDir, "stream.mpd")
-		cmd := fmt.Sprintf("ffmpeg -i udp://%s:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s", mcAddr, mpdFilePath)
+	// Set retry parameters
+	maxRetries := 5
+	retryInterval := 10 * time.Second
+	timeout := 2 * time.Minute // Maximum waiting time for the conversion process
 
-		// Run the conversion command and check if it was successful
-		if err := utils.RunCommand(cmd); err != nil {
-			// If conversion fails, send an error message via WebSocket
-			errorMessage := fmt.Sprintf("Error converting to MPEG-DASH for user %d: %v", userID, err)
-			websocket.BroadcastMessage(sessionID, errorMessage)
+	// Start a timeout timer
+	timeoutChan := time.After(timeout)
+	retryCount := 0
+
+	for {
+		// Check if the timeout has been reached
+		select {
+		case <-timeoutChan:
+			// Notify user that the conversion timed out
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-DASH conversion timed out for user %d", userID))
+			c.JSON(http.StatusRequestTimeout, gin.H{
+				"message": "Conversion timed out. Please try again later.",
+			})
 			return
+		default:
+			// Check if the MPEG-TS file exists before starting conversion
+			if _, err := os.Stat(mpegTSPath); os.IsNotExist(err) {
+				websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-TS file not found for user %d", userID))
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "MPEG-TS file not found. Please upload a video first.",
+				})
+				return
+			}
+
+			// Try the conversion locally
+			dashOutputDir := filepath.Join(userPath, "dash")
+			if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
+				return
+			}
+
+			cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", mpegTSPath, dashOutputDir)
+
+			// Run the conversion command
+			err := utils.RunCommand(cmd)
+			if err == nil {
+				// If successful, broadcast the success message
+				successMessage := fmt.Sprintf("Video processed to MPEG-DASH and is saved locally for user %d.", userID)
+				websocket.BroadcastMessage(sessionID, successMessage)
+
+				// Notify frontend that MPEG-DASH is ready
+				websocket.BroadcastMessage(sessionID, "MPEG-DASH Ready")
+
+				// Immediate response indicating the process is ongoing
+				c.JSON(http.StatusOK, gin.H{
+					"message": "Video processing started. Please wait for the conversion to complete.",
+				})
+				return
+			}
+
+			// If the command failed, increment the retry count
+			retryCount++
+			if retryCount >= maxRetries {
+				// Notify user if maximum retries are reached
+				websocket.BroadcastMessage(sessionID, fmt.Sprintf("Error: Maximum retries reached for MPEG-DASH conversion for user %d", userID))
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": fmt.Sprintf("Error: Maximum retries reached for MPEG-DASH conversion for user %d", userID),
+				})
+				return
+			}
+
+			// Retry after a delay
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Retrying conversion (attempt %d)...", retryCount))
+			time.Sleep(retryInterval)
 		}
-
-		// After successful conversion, check if the .mpd file exists
-		if _, err := os.Stat(mpdFilePath); os.IsNotExist(err) {
-			websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-DASH file not created for user %d", userID))
-			return
-		}
-
-		// Notify about successful conversion
-		successMessage := fmt.Sprintf("Video processed to MPEG-DASH and ready for streaming for user %d.", userID)
-		websocket.BroadcastMessage(sessionID, successMessage)
-
-		// Construct the stream URL with sessionID and userID
-		streamURL := fmt.Sprintf("http://localhost:3000/uploads/%d/%d/dash/stream.mpd", sessionID, userID)
-
-		// After conversion completes, send a response to the client with the stream URL
-		// In this case, we need to send the response to the user, but it can't be done directly
-		// from within the goroutine because the Gin context is not available there.
-		// So, we need some way to notify the client via WebSocket or another mechanism
-		// (such as updating the database or using another channel).
-
-		// Here, we're assuming a WebSocket broadcast or using a notification system.
-		websocket.BroadcastMessage(sessionID, fmt.Sprintf("Stream URL: %s", streamURL))
-	}()
-
-	// Immediate response indicating the process is ongoing
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Video processing started. Please wait for the conversion to complete.",
-	})
+	}
 }
 
-// ServeDashFile serves the DASH manifest file (.mpd) to the client.
+// ServeDashFile serves the DASH manifest file (.mpd) to the client
 func ServeDashFile(c *gin.Context) {
 	var requestData struct {
 		SessionID uint   `json:"sessionID" binding:"required"`

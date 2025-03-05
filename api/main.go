@@ -60,6 +60,7 @@ func main() {
 	r.Static("/uploads", "./uploads")
 	r.POST("/video/upload", middleware.AuthMiddleware(), controllers.ConvertToMPEGTS)
 	r.POST("/video/stream", middleware.AuthMiddleware(), controllers.ServeDashFile)
+	r.POST("/video/dashconvert", middleware.AuthMiddleware(), controllers.ConvertToMPEGDASH)
 
 	// Admin routes (Require both authentication & manager check)
 	r.DELETE("/users/delete", middleware.AuthMiddleware(), middleware.ManagerMiddlewar(), controllers.UsersDelete)
