@@ -16,6 +16,45 @@ const Meeting = () => {
   const videoRefs = useRef({});
   const [socket, setSocket] = useState(null);
   const [dashReady, setDashReady] = useState(false);
+  const localVideoRef = useRef(null);
+
+  useEffect(() => {
+    if (!loading && !isLoggedIn) {
+      navigate("/login");
+    }
+
+    // Capture the camera feed
+    const startCamera = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(device => device.kind === "videoinput");
+    
+        if (cameras.length > 0) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: cameras[0].deviceId },
+          });
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+          }
+        } else {
+          console.error("No camera devices found");
+          Swal.fire("Error", "No camera devices found", "error");
+        }
+      } catch (error) {
+        console.error("Error accessing camera:", error);
+        Swal.fire("Error", "Cannot access camera", "error");
+      }
+    };    
+
+    startCamera();
+
+    return () => {
+      if (localVideoRef.current?.srcObject) {
+        const tracks = localVideoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop()); // Stop the camera when component unmounts
+      }
+    };
+  }, [isLoggedIn, loading, navigate]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -197,6 +236,11 @@ const Meeting = () => {
             Start MPEG-DASH Conversion
           </button>
         )}
+      </div>
+        {/* Local Camera Feed */}
+      <div className="camera-feed">
+        <h3>Your Camera</h3>
+        <video ref={localVideoRef} autoPlay playsInline width="100%"></video>
       </div>
 
       {participants.length > 0 && (
