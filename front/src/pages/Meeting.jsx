@@ -171,41 +171,6 @@ const Meeting = () => {
     }
   };
 
-  const triggerMPEGDASHConversion = async () => {
-    // Check if MPEG-TS conversion is complete before triggering DASH conversion
-    if (!dashReady) {
-      Swal.fire('Error', 'The MPEG-TS conversion has not completed yet.', 'error');
-      return;
-    }
-  
-    try {
-      // Call the back-end API to start the MPEG-DASH conversion
-      const response = await fetch('http://localhost:3000/video/dashconvert', {
-        method: 'POST',
-        credentials: 'include',  // include credentials if using session or cookies
-      });
-  
-      // If the response is OK, show success
-      if (response.ok) {
-        Swal.fire('Success', 'MPEG-DASH conversion started!', 'success');
-        
-        const data = await response.json();
-        if (data) {
-          console.log('data:', data); // Handle the stream URL or show it to the user
-        }
-
-  
-      } else {
-        // Handle errors from the back-end response
-        const errorData = await response.json();
-        Swal.fire('Error', errorData.message || 'Failed to start DASH conversion.', 'error');
-      }
-    } catch (error) {
-      // Catch network or other unexpected errors
-      Swal.fire('Error', error.message || 'Failed to start DASH conversion.', 'error');
-    }
-  };
-
   const initializePlayers = () => {
     participants.forEach((participant, index) => {
       if (participant.streamURL && videoRefs.current[index]) {
@@ -231,11 +196,6 @@ const Meeting = () => {
         <button onClick={handleVideoUpload} className="btn" disabled={uploading}>
           {uploading ? 'Uploading...' : 'Upload Video'}
         </button>
-        {dashReady && (
-          <button onClick={triggerMPEGDASHConversion} className="btn">
-            Start MPEG-DASH Conversion
-          </button>
-        )}
       </div>
         {/* Local Camera Feed */}
       <div className="camera-feed">
