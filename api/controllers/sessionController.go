@@ -301,7 +301,6 @@ func ConvertToMPEGTS(c *gin.Context) {
 	// Define file paths
 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-	mpegTSPath := filepath.Join(userPath, "video.ts")
 
 	// Create directories if they do not exist
 	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
@@ -320,26 +319,20 @@ func ConvertToMPEGTS(c *gin.Context) {
 	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename))
 
 	// Convert MP4 to MPEG-TS (locally)
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", mp4FilePath, mpegTSPath)
-
-	if err := utils.RunCommand(cmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
-		return
-	}
-
-	// Verify that the TS file was created
-	if _, err := os.Stat(mpegTSPath); os.IsNotExist(err) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "MPEG-TS file not created"})
-		return
-	}
+	// cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", mp4FilePath, mpegTSPath)
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://235.235.235.235:555?pkt_size=1316", mp4FilePath)
+	go func() {
+		if err := utils.RunCommand(cmd); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
+			return
+		}
+		ConvertToMPEGDASH(c)
+	}()
 
 	// Notify session that TS conversion is complete
 	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d, MPEG-TS conversion complete. Please start the MPEG-DASH conversion.", userID))
 
-	// Respond to client
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Video processed to MPEG-TS. Please proceed with DASH conversion.",
-	})
+	ConvertToMPEGDASH(c)
 }
 
 // ConvertToMPEGDASH processes the MPEG-TS file to MPEG-DASH locally
@@ -361,7 +354,6 @@ func ConvertToMPEGDASH(c *gin.Context) {
 	// Define paths for the TS file (MPEG-TS should have been created previously)
 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-	mpegTSPath := filepath.Join(userPath, "video.ts") // Path to the MPEG-TS file from previous conversion
 
 	// Acknowledge the start of video processing
 	message := fmt.Sprintf("Started processing video for user %d. Please wait...", userID)
@@ -387,15 +379,6 @@ func ConvertToMPEGDASH(c *gin.Context) {
 			})
 			return
 		default:
-			// Check if the MPEG-TS file exists before starting conversion
-			if _, err := os.Stat(mpegTSPath); os.IsNotExist(err) {
-				websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-TS file not found for user %d", userID))
-				c.JSON(http.StatusNotFound, gin.H{
-					"message": "MPEG-TS file not found. Please upload a video first.",
-				})
-				return
-			}
-
 			// Try the conversion locally
 			dashOutputDir := filepath.Join(userPath, "dash")
 			if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
@@ -403,8 +386,8 @@ func ConvertToMPEGDASH(c *gin.Context) {
 				return
 			}
 
-			cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", mpegTSPath, dashOutputDir)
-
+			// cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", mpegTSPath, dashOutputDir)
+			cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", dashOutputDir)
 			// Run the conversion command
 			err := utils.RunCommand(cmd)
 			if err == nil {
