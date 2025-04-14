@@ -318,9 +318,10 @@ func ConvertToMPEGTS(c *gin.Context) {
 	// Notify session about video processing start
 	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename))
 
+	multicastIp := generateMulticastIP(sessionID)
 	// Convert MP4 to MPEG-TS (locally)
 	// cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", mp4FilePath, mpegTSPath)
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://235.235.235.235:555?pkt_size=1316", mp4FilePath)
+	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://%s:555?pkt_size=1316", mp4FilePath, multicastIp)
 	go func() {
 		if err := utils.RunCommand(cmd); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
@@ -386,8 +387,9 @@ func ConvertToMPEGDASH(c *gin.Context) {
 				return
 			}
 
+			multicastIp := generateMulticastIP(sessionID)
 			// cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", mpegTSPath, dashOutputDir)
-			cmd := fmt.Sprintf("ffmpeg -i udp://235.235.235.235:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", dashOutputDir)
+			cmd := fmt.Sprintf("ffmpeg -i udp://%s:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", multicastIp, dashOutputDir)
 			// Run the conversion command
 			err := utils.RunCommand(cmd)
 			if err == nil {
