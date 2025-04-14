@@ -119,8 +119,10 @@ const Meeting = () => {
         Swal.fire('MPEG-TS Complete', 'Ready for MPEG-DASH conversion.', 'info');
       }else if (message.includes('MPEG-DASH Ready')) {
         Swal.fire('MPEG-DASH Ready', 'The video is ready to play.', 'success');
+        fetchSessionDetails(); // this re-fetches participants with new streamURLs
         initializePlayers();
       }
+      
     };
     ws.onerror = (error) => console.log('WebSocket error:', error);
     ws.onclose = () => console.log('WebSocket connection closed');
@@ -201,8 +203,9 @@ const Meeting = () => {
       <div className="camera-feed">
         <h3>Your Camera</h3>
         <video ref={localVideoRef} autoPlay playsInline width="100%"></video>
+        
       </div>
-
+      
       {participants.length > 0 && (
         <div className="participants">
           {participants.map((participant, index) => (
@@ -212,7 +215,7 @@ const Meeting = () => {
                 controls
                 width="100%"
                 ref={(el) => (videoRefs.current[index] = el)}
-                onLoadedMetadata={() => initializeDashPlayer(index, participant.streamURL)}
+
               />
               {!participant.streamURL && <p>Stream URL not available</p>}
             </div>
