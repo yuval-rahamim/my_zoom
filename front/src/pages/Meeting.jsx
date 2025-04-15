@@ -183,6 +183,51 @@ const Meeting = () => {
   };
   
   useEffect(() => {
+    let mediaRecorder;
+    let stream;
+  
+    const startRecording = async () => {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideoRef.current.srcObject = stream;
+  
+      mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp8,opus'
+      });
+  
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          sendSliceToBackend(event.data);
+        }
+      };
+  
+      mediaRecorder.start(1000); // Record 1s chunks
+    };
+  
+    startRecording();
+  
+    return () => {
+      mediaRecorder?.stop();
+      stream?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+  
+  const sendSliceToBackend = async (blob) => {
+    const formData = new FormData();
+    formData.append("video", blob);  // Send the video slice
+  
+    try {
+      // Send the video slice to the backend endpoint
+      await fetch("http://localhost:3000/video/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include", 
+      });
+    } catch (error) {
+      console.error("Error sending video slice:", error);
+    }
+  };
+
+  useEffect(() => {
     initializePlayers(); // Call inside useEffect when participants change
   }, [participants]);
 

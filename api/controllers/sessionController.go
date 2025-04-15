@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 	"yuval/inits"
 	"yuval/models"
@@ -14,6 +15,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+var dashRunning = make(map[uint]bool)
+var dashMutex = &sync.Mutex{}
 
 // Function to generate a multicast address based on session ID
 func generateMulticastIP(sessionID uint) string {
@@ -277,7 +281,7 @@ func JoinSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session", "session_id": session.ID})
 }
 
-// ConvertToMPEGTS processes an uploaded MP4 file into MPEG-TS locally
+// ConvertToMPEGTS handles real-time video slices (e.g., WebM chunks) and multicasts them as MPEG-TS
 func ConvertToMPEGTS(c *gin.Context) {
 	userID, err := GetValidUserID(c)
 	if err != nil {
@@ -291,49 +295,58 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
-	// Parse file from request
+	// Auto-start MPEG-DASH conversion for this session if not already running
+	dashMutex.Lock()
+	if !dashRunning[sessionID] {
+		dashRunning[sessionID] = true
+		go func() {
+			ctx, _ := gin.CreateTestContext(nil)
+			ctx.Request = c.Request
+			ctx.Set("userID", userID) // Inject user ID
+			ConvertToMPEGDASH(ctx)
+		}()
+	}
+	dashMutex.Unlock()
+
+	// Parse uploaded WebM slice
 	file, err := c.FormFile("video")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file upload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video slice upload"})
 		return
 	}
 
-	// Define file paths
+	// Define storage paths
 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-
-	// Create directories if they do not exist
 	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directories"})
 		return
 	}
 
-	// Save uploaded MP4 file
-	mp4FilePath := filepath.Join(userPath, file.Filename)
-	if err := c.SaveUploadedFile(file, mp4FilePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+	// Save slice temporarily
+	timestamp := time.Now().UnixNano()
+	sliceFileName := fmt.Sprintf("slice-%d.webm", timestamp)
+	slicePath := filepath.Join(userPath, sliceFileName)
+	if err := c.SaveUploadedFile(file, slicePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save slice"})
 		return
 	}
 
-	// Notify session about video processing start
-	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d has started processing video: %s", userID, file.Filename))
-
+	// Multicast this slice as MPEG-TS
 	multicastIp := generateMulticastIP(sessionID)
-	// Convert MP4 to MPEG-TS (locally)
-	// cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 %s", mp4FilePath, mpegTSPath)
-	cmd := fmt.Sprintf("ffmpeg -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts -crf 32 udp://%s:555?pkt_size=1316", mp4FilePath, multicastIp)
+	cmd := fmt.Sprintf(
+		"ffmpeg -y -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts udp://%s:555?pkt_size=1316",
+		slicePath, multicastIp,
+	)
+
 	go func() {
 		if err := utils.RunCommand(cmd); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg TS conversion failed"})
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Failed to convert slice for user %d", userID))
 			return
 		}
-		ConvertToMPEGDASH(c)
 	}()
 
-	// Notify session that TS conversion is complete
-	websocket.BroadcastMessage(sessionID, fmt.Sprintf("User %d, MPEG-TS conversion complete. Please start the MPEG-DASH conversion.", userID))
-
-	ConvertToMPEGDASH(c)
+	c.JSON(http.StatusOK, gin.H{"message": "Slice received and processing started"})
 }
 
 // ConvertToMPEGDASH processes the MPEG-TS file to MPEG-DASH locally
