@@ -59,7 +59,7 @@ function Home() {
         <div className='button-wrap'>
           <button className='b' onClick={()=>{navigate('/joinmeeting')}}>Join</button>
           <button className='b' onClick={()=>{navigate('/createmeeting')}}>Create</button>
-          <button className='b'>Friends</button>
+          <button className='b' onClick={()=>{navigate('/friends')}}>Friends</button>
           <button className='b' onClick={()=>{navigate('/edit')}}>Edit user</button>
         </div>
     </div>
