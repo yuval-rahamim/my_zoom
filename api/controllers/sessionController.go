@@ -295,58 +295,33 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
-	// Auto-start MPEG-DASH conversion for this session if not already running
-	dashMutex.Lock()
-	if !dashRunning[sessionID] {
-		dashRunning[sessionID] = true
-		go func() {
-			ctx, _ := gin.CreateTestContext(nil)
-			ctx.Request = c.Request
-			ctx.Set("userID", userID) // Inject user ID
-			ConvertToMPEGDASH(ctx)
-		}()
-	}
-	dashMutex.Unlock()
-
-	// Parse uploaded WebM slice
-	file, err := c.FormFile("video")
+	fileHeader, err := c.FormFile("video")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video slice upload"})
 		return
 	}
 
-	// Define storage paths
-	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
-	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directories"})
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded slice"})
 		return
 	}
+	defer file.Close()
 
-	// Save slice temporarily
-	timestamp := time.Now().UnixNano()
-	sliceFileName := fmt.Sprintf("slice-%d.webm", timestamp)
-	slicePath := filepath.Join(userPath, sliceFileName)
-	if err := c.SaveUploadedFile(file, slicePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save slice"})
-		return
-	}
-
-	// Multicast this slice as MPEG-TS
 	multicastIp := generateMulticastIP(sessionID)
-	cmd := fmt.Sprintf(
-		"ffmpeg -y -i %s -c:v libx264 -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts udp://%s:555?pkt_size=1316",
-		slicePath, multicastIp,
+
+	ffmpegCmd := fmt.Sprintf(
+		"ffmpeg -y -f webm -i - -c:v libx264 -c:a aac -b:a 160k -preset ultrafast -f mpegts udp://%s:555?pkt_size=1316",
+		multicastIp,
 	)
 
 	go func() {
-		if err := utils.RunCommand(cmd); err != nil {
-			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Failed to convert slice for user %d", userID))
-			return
+		if err := utils.RunCommandWithStdin(ffmpegCmd, file); err != nil {
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Failed to stream slice from memory for user %d", userID))
 		}
 	}()
 
-	c.JSON(http.StatusOK, gin.H{"message": "Slice received and processing started"})
+	c.JSON(http.StatusOK, gin.H{"message": "Slice streamed from memory"})
 }
 
 // ConvertToMPEGDASH processes the MPEG-TS file to MPEG-DASH locally
