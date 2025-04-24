@@ -62,15 +62,25 @@ const EditUser = () => {
           }
 
           const targetUserData = await targetUserResponse.json();
+          console.log(targetUserData);
+          if (targetUserData.user) {
+            setUpdatedUser({
+              Name: targetUserData.user.Name,
+              ImgPath: targetUserData.user.ImgPath,
+              Manager: targetUserData.user.Manager,
+             });
+          }
           if (!targetUserData.user) {
             throw new Error("Target user data not found.");
           }
-        }  
-       setUpdatedUser({
-        Name: currentUserData.user.Name,
-        ImgPath: currentUserData.user.ImgPath,
-        Manager: currentUserData.user.Manager,
-       });
+        }  else {
+          setUpdatedUser({
+            Name: currentUserData.user.Name,
+            ImgPath: currentUserData.user.ImgPath,
+            Manager: currentUserData.user.Manager,
+           });
+        }
+
       } catch (error) {
         setError(error.message);
         console.error("Error fetching users:", error);
