@@ -1,0 +1,52 @@
+.friend-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-direction: column;
+  }
+  
+  .friend-controls input {
+    padding: 0.5rem;
+    border: 1px solid var(--light-text-color);
+    border-radius: 5px;
+    background-color: white;
+    color: var(--text-color);
+    box-shadow: 0 2px 4px var(--shadow-color);
+  }
+  
+  .friend-controls button {
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .friend-controls button:hover {
+    background-color: var(--button-hover);
+  }
+  
+  .friend-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .friend-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background-color: var(--navbar-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+  }
+  
+  .friend-list li button {
+    background-color: transparent;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+  }
+  

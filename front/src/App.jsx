@@ -13,6 +13,7 @@ import Meeting from './pages/Meeting.jsx'
 import {AuthProvider} from './components/AuthContext'
 
 import './styles/App.css';
+import Friends from './pages/Friends.jsx';
 
 const App = () => {
   return ( 
@@ -23,6 +24,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/home" element={<Home />} />
+              <Route path="/friends" element={<Friends />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/createmeeting" element={<CreateMeeting />}></Route>
