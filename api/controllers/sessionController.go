@@ -295,12 +295,24 @@ func ConvertToMPEGTS(c *gin.Context) {
 		return
 	}
 
+	// Define user path based on sessionID and userID
+	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory for user slices"})
+		return
+	}
+
+	// Get the uploaded video slice file
 	fileHeader, err := c.FormFile("video")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video slice upload"})
 		return
 	}
 
+	// Open the uploaded file
 	file, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded slice"})
@@ -308,26 +320,38 @@ func ConvertToMPEGTS(c *gin.Context) {
 	}
 	defer file.Close()
 
+	// Save the uploaded file temporarily
+	timestamp := time.Now().UnixNano()
+	sliceFileName := fmt.Sprintf("slice-%d.webm", timestamp)
+	slicePath := filepath.Join(userPath, sliceFileName)
+	if err := c.SaveUploadedFile(fileHeader, slicePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save slice"})
+		return
+	}
+
+	// Generate multicast IP for the session
 	multicastIp := generateMulticastIP(sessionID)
 
 	// FFmpeg command explanation:
-	// - Input: WebM from stdin (piped directly from memory, not a file)
+	// - Input: WebM from saved file
 	// - Video: Encoded with H.264 using libx264 (ultrafast, low-latency)
 	// - Audio: Encoded with AAC at 160kbps
 	// - Output: MPEG-TS streamed via UDP multicast to a generated IP
 	// - pkt_size and ttl help control packet size and multicast range
 
 	ffmpegCmd := fmt.Sprintf(
-		`ffmpeg -f webm -i - -c:v libx264 -preset ultrafast -tune zerolatency -c:a aac -b:a 160k -f mpegts "udp://%s:555?pkt_size=1316&ttl=16"`,
-		multicastIp,
+		`ffmpeg -y -i %s -c:v libx264 -preset ultrafast -tune zerolatency -c:a aac -b:a 160k -bsf:v h264_mp4toannexb -f mpegts udp://%s:555?pkt_size=1316&ttl=16`,
+		slicePath, multicastIp,
 	)
 
+	// Run the FFmpeg command to stream the slice
 	go func() {
-		if err := utils.RunCommandWithStdin(ffmpegCmd, file); err != nil {
+		if err := utils.RunCommand(ffmpegCmd); err != nil {
 			websocket.BroadcastMessage(sessionID, fmt.Sprintf("⚠️ Failed to stream slice for user %d: %v", userID, err))
 		}
 	}()
 
+	// Respond to the client that streaming has started
 	c.JSON(http.StatusOK, gin.H{"message": "✅ Slice streaming to multicast address"})
 }
 
