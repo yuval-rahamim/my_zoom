@@ -310,107 +310,63 @@ func ConvertToMPEGTS(c *gin.Context) {
 
 	multicastIp := generateMulticastIP(sessionID)
 
+	// FFmpeg command explanation:
+	// - Input: WebM from stdin (piped directly from memory, not a file)
+	// - Video: Encoded with H.264 using libx264 (ultrafast, low-latency)
+	// - Audio: Encoded with AAC at 160kbps
+	// - Output: MPEG-TS streamed via UDP multicast to a generated IP
+	// - pkt_size and ttl help control packet size and multicast range
+
 	ffmpegCmd := fmt.Sprintf(
-		"ffmpeg -y -f webm -i - -c:v libx264 -c:a aac -b:a 160k -preset ultrafast -f mpegts udp://%s:555?pkt_size=1316",
+		`ffmpeg -f webm -i - -c:v libx264 -preset ultrafast -tune zerolatency -c:a aac -b:a 160k -f mpegts "udp://%s:555?pkt_size=1316&ttl=16"`,
 		multicastIp,
 	)
 
 	go func() {
 		if err := utils.RunCommandWithStdin(ffmpegCmd, file); err != nil {
-			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Failed to stream slice from memory for user %d", userID))
+			websocket.BroadcastMessage(sessionID, fmt.Sprintf("⚠️ Failed to stream slice for user %d: %v", userID, err))
 		}
 	}()
 
-	c.JSON(http.StatusOK, gin.H{"message": "Slice streamed from memory"})
+	c.JSON(http.StatusOK, gin.H{"message": "✅ Slice streaming to multicast address"})
 }
 
-// ConvertToMPEGDASH processes the MPEG-TS file to MPEG-DASH locally
+// ConvertToMPEGDASH listens to a multicast MPEG-TS stream and converts it into MPEG-DASH segments
 func ConvertToMPEGDASH(c *gin.Context) {
-	// Retrieve the userID from the context (e.g., from a session or JWT)
 	userID, err := GetValidUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		return
 	}
 
-	// Retrieve sessionID from the context or database
 	sessionID, _, err := GetSessionByUserID(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Define paths for the TS file (MPEG-TS should have been created previously)
+	// Set up output directory
 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+	dashOutputDir := filepath.Join(userPath, "dash")
 
-	// Acknowledge the start of video processing
-	message := fmt.Sprintf("Started processing video for user %d. Please wait...", userID)
-	websocket.BroadcastMessage(sessionID, message)
-
-	// Set retry parameters
-	maxRetries := 5
-	retryInterval := 10 * time.Second
-	timeout := 2 * time.Minute // Maximum waiting time for the conversion process
-
-	// Start a timeout timer
-	timeoutChan := time.After(timeout)
-	retryCount := 0
-
-	for {
-		// Check if the timeout has been reached
-		select {
-		case <-timeoutChan:
-			// Notify user that the conversion timed out
-			websocket.BroadcastMessage(sessionID, fmt.Sprintf("MPEG-DASH conversion timed out for user %d", userID))
-			c.JSON(http.StatusRequestTimeout, gin.H{
-				"message": "Conversion timed out. Please try again later.",
-			})
-			return
-		default:
-			// Try the conversion locally
-			dashOutputDir := filepath.Join(userPath, "dash")
-			if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH directory"})
-				return
-			}
-
-			multicastIp := generateMulticastIP(sessionID)
-			// cmd := fmt.Sprintf("ffmpeg -i %s -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", mpegTSPath, dashOutputDir)
-			cmd := fmt.Sprintf("ffmpeg -i udp://%s:555 -map 0 -codec:v libx264 -b:v 1000k -codec:a aac -b:a 128k -f dash -seg_duration 20 -use_template 1 -use_timeline 1 %s/stream.mpd", multicastIp, dashOutputDir)
-			// Run the conversion command
-			err := utils.RunCommand(cmd)
-			if err == nil {
-				// If successful, broadcast the success message
-				successMessage := fmt.Sprintf("Video processed to MPEG-DASH and is saved locally for user %d.", userID)
-				websocket.BroadcastMessage(sessionID, successMessage)
-
-				// Notify frontend that MPEG-DASH is ready
-				websocket.BroadcastMessage(sessionID, "MPEG-DASH Ready")
-
-				// Immediate response indicating the process is ongoing
-				c.JSON(http.StatusOK, gin.H{
-					"message": "Video processing started. Please wait for the conversion to complete.",
-				})
-				return
-			}
-
-			// If the command failed, increment the retry count
-			retryCount++
-			if retryCount >= maxRetries {
-				// Notify user if maximum retries are reached
-				websocket.BroadcastMessage(sessionID, fmt.Sprintf("Error: Maximum retries reached for MPEG-DASH conversion for user %d", userID))
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"message": fmt.Sprintf("Error: Maximum retries reached for MPEG-DASH conversion for user %d", userID),
-				})
-				return
-			}
-
-			// Retry after a delay
-			websocket.BroadcastMessage(sessionID, fmt.Sprintf("Retrying conversion (attempt %d)...", retryCount))
-			time.Sleep(retryInterval)
-		}
+	if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create DASH output directory"})
+		return
 	}
+
+	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
+	multicastIp := generateMulticastIP(sessionID)
+	cmd := fmt.Sprintf(`ffmpeg -i udp://%s:555 -map 0 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 2 -use_template 1 -use_timeline 1 %s/stream.mpd`, multicastIp, dashOutputDir)
+
+	// Run conversion in a goroutine to allow immediate HTTP response
+	go func() {
+		_ = utils.RunCommand(cmd)
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Started MPEG-DASH conversion",
+	})
 }
 
 // ServeDashFile serves the DASH manifest file (.mpd) to the client
