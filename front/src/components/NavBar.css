@@ -5,14 +5,14 @@
   left: 0;
   width: 100%;
   z-index: 100;
-  background-color: var(--background);
+  background-color: var(navbar-bg);
   box-shadow: 0 4px 8px var(--shadow-color);
   transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.2s ease;
 }
 
 /* Hover effect */
 .navbar:hover {
-  background-color: color-mix(in srgb, var(--background) 80%, var(--toggle-bg) 10%);
+  background-color: color-mix(in srgb, var(navbar-bg) 80%, var(--toggle-bg) 10%);
   box-shadow: 0 6px 12px var(--shadow-color);
   transform: translateY(-2px);
 }
