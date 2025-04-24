@@ -1,0 +1,30 @@
+.meeting-container {
+    padding: 1rem;
+  }
+  
+  .top-bar {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .videos-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .video-card {
+    background: #f0f0f0;
+    padding: 0.75rem;
+    border-radius: 10px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    text-align: center;
+  }
+  
+  .video-player {
+    width: 100%;
+    border-radius: 8px;
+  }
+  
