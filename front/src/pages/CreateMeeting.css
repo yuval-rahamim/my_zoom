@@ -13,7 +13,7 @@
     border: 1px solid var(--icon-color);
   }
   
-  .copy-btn, .generate-btn {
+  .generate-btn {
     background: var(--button-bg);
     color: white;
     border: none;
@@ -21,45 +21,37 @@
     cursor: pointer;
     border-radius: 5px;
     transition: background 0.2s;
-  }
-  
-  .copy-btn:hover, .generate-btn:hover {
-    background: var(--button-hover);
-  }
-  
-  .generate-btn {
     margin-bottom: 10px;
     width: 100%;
   }
   
+  .generate-btn:hover {
+    background: var(--button-hover);
+  }
+
   /* From Uiverse.io by Galahhad */ 
 /* tooltip settings 👇 */
 
 .copy {
   /* button */
-  --button-bg: #353434;
-  --button-hover-bg: #464646;
-  --button-text-color: #CCCCCC;
-  --button-hover-text-color: #8bb9fe;
+  --button-bg: var(--button-bg);
+  --button-hover-bg: var(--button-hover);
+  --button-text-color: var(--icon-color);
+  --button-hover-text-color: var(--accent-color);
   --button-border-radius: 10px;
   --button-diameter: 36px;
   --button-outline-width: 1px;
-  --button-outline-color: rgb(141, 141, 141);
+  --button-outline-color: var(--icon-color);
+
   /* tooltip */
-  --tooltip-bg: #f4f3f3;
-  --toolptip-border-radius: 4px;
+  --tooltip-bg: var(--background);
+  --tooltip-border-radius: 4px;
   --tooltip-font-family: Menlo, Roboto Mono, monospace;
-  /* 👆 this field should not be empty */
   --tooltip-font-size: 12px;
-  /* 👆 this field should not be empty */
-  --tootip-text-color: rgb(50, 50, 50);
+  --tooltip-text-color: var(--text-color);
   --tooltip-padding-x: 7px;
   --tooltip-padding-y: 7px;
   --tooltip-offset: 8px;
-  /* --tooltip-transition-duration: 0.3s; */
-  /* 👆 if you need a transition, 
-  just remove the comment,
-  but I didn't like the transition :| */
 }
 
 .copy {
@@ -73,23 +65,24 @@
   cursor: pointer;
   position: relative;
   outline: none;
+  transition: background 0.3s, color 0.3s;
 }
 
 .tooltip {
   position: absolute;
   opacity: 0;
-  visibility: 0;
+  visibility: hidden;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
   font: var(--tooltip-font-size) var(--tooltip-font-family);
-  color: var(--tootip-text-color);
+  color: var(--tooltip-text-color);
   background: var(--tooltip-bg);
   padding: var(--tooltip-padding-y) var(--tooltip-padding-x);
-  border-radius: var(--toolptip-border-radius);
+  border-radius: var(--tooltip-border-radius);
   pointer-events: none;
-  transition: all var(--tooltip-transition-duration) cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transition: all 0.3s ease;
 }
 
 .tooltip::before {
@@ -105,7 +98,7 @@
   background: inherit;
   left: 50%;
   transform: translateX(-50%) rotate(45deg);
-  z-index: -999;
+  z-index: -1;
   pointer-events: none;
 }
 
@@ -113,6 +106,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 100%;
+  height: 100%;
   transform: translate(-50%, -50%);
 }
 
@@ -121,7 +116,6 @@
 }
 
 /* actions */
-
 .copy:hover .tooltip,
 .copy:focus:not(:focus-visible) .tooltip {
   opacity: 1;
@@ -143,7 +137,8 @@
 
 .copy:hover,
 .copy:focus {
-  background-color: var(--button-hover-bg);
+  background-color: var(--button-bg); /* Keep original background */
+  color: var(--button-hover-text-color); /* Change text/icon color */
 }
 
 .copy:active {
