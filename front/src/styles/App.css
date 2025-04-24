@@ -12,6 +12,7 @@
   color: #2C3E50;
   background-color: #F7F9FC;
 
+<<<<<<< Updated upstream
   --background: #F7F9FC;
   --navbar-bg: #E3E6EE;
   --light-text-color: #6c7a89; 
@@ -22,6 +23,19 @@
   --button-bg: #2D87F0;
   --button-hover: #1A73E8;
   --icon-color: #586069;
+=======
+  --background: #F1F5F9;
+  --background-gradient: linear-gradient(135deg, #F1F5F9 0%, #8cb9f5 100%);
+  --navbar-bg: #E2E8F0;
+  --text-color: #1F2937;
+  --light-text-color: #6B7280;
+  --accent-color: #2DA44E;
+  --accent-light: #1E7A37;
+  --hover-bg: rgba(45, 164, 78, 0.1);
+  --button-bg: #2DA44E;
+  --button-hover: #1E7A37;
+  --icon-color: #37547e;
+>>>>>>> Stashed changes
   --toggle-bg: #CCC;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --img-bright:0;

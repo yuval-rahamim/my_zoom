@@ -185,6 +185,7 @@ const Meeting = () => {
   }, [participants]);
 
   return (
+<<<<<<< Updated upstream
     <div className="home">
       <div className="card">
         <h2 className="center-text">Meeting ID: {id}</h2>
@@ -196,6 +197,35 @@ const Meeting = () => {
         <button onClick={handleVideoUpload} className="btn" disabled={uploading}>
           {uploading ? 'Uploading...' : 'Upload Video'}
         </button>
+=======
+    <div className="meeting-container">
+      <div className="top-bar">
+        <h2>Meeting ID: {id}</h2>
+        <h3>Welcome, {name}</h3>
+      </div>
+
+      <div className="videos-container">
+        {/* Local Video */}
+        <div className="video-card">
+          <h4>{name}</h4>
+          <video ref={localVideoRef} autoPlay muted playsInline className="video-player" />
+        </div>
+
+        {/* Participants */}
+        {participants
+          .filter((p) => p.name !== name) // Exclude current user by name
+          .map((p) => (
+            <div key={p.id} className="video-card">
+              <h4>{p.name}</h4>
+              <video
+                ref={(el) => (videoRefs.current[p.id] = el)}
+                controls
+                className="video-player"
+              />
+              {!p.streamURL && <p>Waiting for stream...</p>}
+            </div>
+        ))}
+>>>>>>> Stashed changes
       </div>
         {/* Local Camera Feed */}
       <div className="camera-feed">
