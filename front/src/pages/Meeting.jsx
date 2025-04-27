@@ -12,52 +12,54 @@ const Meeting = () => {
   const localVideoRef = useRef(null);
   const videoRefs = useRef({});
   const { id } = useParams();
+  const [userID,setUserID] = useState()
   const navigate = useNavigate();
 
   // Handle access to camera and microphone
   useEffect(() => {
+   
+  }, [participants]);
+  
+  // User auth and session
+  useEffect(() => {
+    let mediaRecorder;
+    let socket;
+    let stream;
+  
     const startMedia = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // 1. Get access to camera/mic
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideoRef.current.srcObject = stream;
-
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
-
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) sendToBackend(e.data);
+  
+        // 2. Connect to WebSocket server
+        socket = new WebSocket(`ws://localhost:8080/b?userID=${userID}`);
+  
+        socket.onopen = () => {
+          console.log('WebSocket connected!');
+  
+          // 3. Start recording after WebSocket is open
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+  
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+              socket.send(event.data);
+            }
+          };
+  
+          mediaRecorder.start(1000); // record and send every 1 second
         };
-
-        recorder.start(1000); // 1s chunks
-
-        return () => {
-          recorder.stop();
-          stream.getTracks().forEach(t => t.stop());
+  
+        socket.onerror = (error) => {
+          console.error('WebSocket error:', error);
         };
+  
       } catch (err) {
         console.error('Media error:', err);
         Swal.fire('Error', 'Cannot access camera or microphone', 'error');
       }
     };
 
-    startMedia();
-  }, []);
-
-  const sendToBackend = async (blob) => {
-    const formData = new FormData();
-    formData.append('video', blob);
-    try {
-      await fetch('http://localhost:3000/video/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-    } catch (err) {
-      console.error('Sending video failed:', err);
-    }
-  };
-
-  // User auth and session
-  useEffect(() => {
     const fetchUser = async () => {
       const res = await fetch('http://localhost:3000/users/cookie', { credentials: 'include' });
       if (!res.ok) {
@@ -67,6 +69,7 @@ const Meeting = () => {
       }
       const data = await res.json();
       setName(data.user.Name);
+      setUserID(data.user.ID);
     };
 
     const fetchParticipants = async () => {
@@ -82,6 +85,7 @@ const Meeting = () => {
     if (!loading && isLoggedIn) {
       fetchUser();
       fetchParticipants();
+      startMedia();
     }
   }, [isLoggedIn, loading, navigate, id, logout]);
 
@@ -105,7 +109,7 @@ const Meeting = () => {
       <div className="videos-container">
         {/* Local Video */}
         <div className="video-card">
-          <h4>You</h4>
+          <h4>{name}</h4>
           <video ref={localVideoRef} autoPlay muted playsInline className="video-player" />
         </div>
 
