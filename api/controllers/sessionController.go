@@ -18,12 +18,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// var dashRunning = make(map[uint]bool)
-// var dashMutex = &sync.Mutex{}
-
-// Function to generate a multicast address based on session ID
-func generateMulticastIP(sessionID uint) string {
-	return fmt.Sprintf("239.255.255.%d", sessionID)
+// Function to generate a multicast address based on user ID
+func generateMulticastIP(userID uint) string {
+	baseIP := [4]int{235, 0, 0, 0}
+	baseIP[3] += int(userID % 255)
+	return fmt.Sprintf("%d.%d.%d.%d", baseIP[0], baseIP[1], baseIP[2], baseIP[3])
 }
 
 // Check if the user is part of the session
@@ -316,18 +315,32 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Start FFmpeg
+	multicastIP := generateMulticastIP(userID)
+	udpURL := fmt.Sprintf("udp://%s:55?pkt_size=1316", multicastIP)
+
 	cmd := exec.Command("ffmpeg",
-		"-f", "webm", // input format
-		"-i", "pipe:0", // read from stdin
+		"-f", "webm",
+		"-i", "pipe:0",
 		"-c:v", "libx264",
 		"-preset", "veryfast",
 		"-g", "30",
 		"-sc_threshold", "0",
 		"-c:a", "aac",
 		"-f", "mpegts",
-		"udp://235.235.235.235:55?pkt_size=1316", // multicast address
+		udpURL,
 	)
+	// Start FFmpeg
+	// cmd := exec.Command("ffmpeg",
+	// 	"-f", "webm", // input format
+	// 	"-i", "pipe:0", // read from stdin
+	// 	"-c:v", "libx264",
+	// 	"-preset", "veryfast",
+	// 	"-g", "30",
+	// 	"-sc_threshold", "0",
+	// 	"-c:a", "aac",
+	// 	"-f", "mpegts",
+	// 	"udp://235.235.235.235:55?pkt_size=1316", // multicast address
+	// )
 
 	ffmpegIn, err := cmd.StdinPipe()
 	if err != nil {
@@ -367,66 +380,6 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	log.Println("FFmpeg process exited")
 }
 
-// ConvertToMPEGTS handles real-time video slices (e.g., WebM chunks) and multicasts them as MPEG-TS
-// func ConvertToMPEGTS(c *gin.Context) {
-// 	userID, err := GetValidUserID(c)
-// 	if err != nil {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
-// 		return
-// 	}
-
-// 	sessionID, _, err := GetSessionByUserID(userID)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	// Define user path based on sessionID and userID
-// 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
-// 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-
-// 	// Ensure the directory exists
-// 	if err := os.MkdirAll(userPath, os.ModePerm); err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory for user slices"})
-// 		return
-// 	}
-
-// 	// Save the incoming body (blob) as a file
-// 	timestamp := time.Now().UnixNano()
-// 	sliceFileName := fmt.Sprintf("slice-%d.webm", timestamp)
-// 	slicePath := filepath.Join(userPath, sliceFileName)
-
-// 	outFile, err := os.Create(slicePath)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create slice file"})
-// 		return
-// 	}
-// 	defer outFile.Close()
-
-// 	_, err = io.Copy(outFile, c.Request.Body)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write slice"})
-// 		return
-// 	}
-
-// 	// Generate multicast IP for the session
-// 	multicastIp := generateMulticastIP(sessionID)
-
-// 	ffmpegCmd := fmt.Sprintf(
-// 		`ffmpeg -y -i "%s" -c:v libx264 -preset ultrafast -tune zerolatency -c:a aac -b:a 160k -f mpegts out.mp4`,
-// 		slicePath, multicastIp,
-// 	)
-
-// 	// Run FFmpeg asynchronously
-// 	go func() {
-// 		if err := utils.RunCommand(ffmpegCmd); err != nil {
-// 			websocket2.BroadcastMessage(sessionID, fmt.Sprintf("⚠️ Failed to stream slice for user %d: %v", userID, err))
-// 		}
-// 	}()
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "✅ Slice streaming to multicast address"})
-// }
-
 // ConvertToMPEGDASH listens to a multicast MPEG-TS stream and converts it into MPEG-DASH segments
 func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// Set up output directory
@@ -439,8 +392,8 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	}
 
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
-	// multicastIp := generateMulticastIP(sessionID)
-	cmd := fmt.Sprintf(`ffmpeg -i udp://235.235.235.235:55 -map 0 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 2 -use_template 1 -use_timeline 1 %s/stream.mpd`, dashOutputDir)
+	multicastIp := generateMulticastIP(userID)
+	cmd := fmt.Sprintf(`ffmpeg -i udp://%s:55 -map 0 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 2 -use_template 1 -use_timeline 1 %s/stream.mpd`, multicastIp, dashOutputDir)
 
 	// Run conversion in a goroutine to allow immediate HTTP response
 	go func() {

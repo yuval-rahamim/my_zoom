@@ -15,13 +15,10 @@ const Meeting = () => {
   const [userID,setUserID] = useState()
   const navigate = useNavigate();
 
-  // Handle access to camera and microphone
-  useEffect(() => {
-   
-  }, [participants]);
   
   // User auth and session
   useEffect(() => {
+      // Handle access to camera and microphone
     let mediaRecorder;
     let socket;
     let stream;
