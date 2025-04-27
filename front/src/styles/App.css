@@ -4,6 +4,7 @@
 }
 
 :root {
+  background: var(--background-gradient);
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -12,18 +13,6 @@
   color: #2C3E50;
   background-color: #F7F9FC;
 
-<<<<<<< Updated upstream
-  --background: #F7F9FC;
-  --navbar-bg: #E3E6EE;
-  --light-text-color: #6c7a89; 
-  --text-color: #2C3E50;
-  --accent-color: #1E6091;
-  --accent-light: #0D47A1;
-  --hover-bg: rgba(13, 71, 161, 0.1);
-  --button-bg: #2D87F0;
-  --button-hover: #1A73E8;
-  --icon-color: #586069;
-=======
   --background: #F1F5F9;
   --background-gradient: linear-gradient(135deg, #F1F5F9 0%, #8cb9f5 100%);
   --navbar-bg: #E2E8F0;
@@ -35,7 +24,6 @@
   --button-bg: #2DA44E;
   --button-hover: #1E7A37;
   --icon-color: #37547e;
->>>>>>> Stashed changes
   --toggle-bg: #CCC;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --img-bright:0;
@@ -43,32 +31,39 @@
 
 /* Dark Mode */
 .dark-mode {
-  --background: #1E1E2E;
-  --navbar-bg: #252537;
-  --light-text-color: #c3c3c3;
-  --text-color: #EAEAEA;
-  --accent-color: #63B3ED;
-  --accent-light: #4299E1;
-  --hover-bg: rgba(66, 153, 225, 0.1);
-  --button-bg: #3182CE;
-  --button-hover: #2B6CB0;
-  --icon-color: #C0C5CE;
-  --toggle-bg: #555;
-  --img-bright:0.8;
-  --shadow-color: rgba(255, 255, 255, 0.1);
-  background: var(--background);
+  background: var(--background-gradient);
+
+  --background: #1F2937; /* Dark Slate */
+  --background-gradient: linear-gradient(135deg, #1F2937 0%, #46285f 100%);
+  --navbar-bg: #46285f;
+  --text-color: #F3F4F6;
+  --light-text-color: #A1AFC6;
+
+  --accent-color: #60AFFF;       /* Sky Blue */
+  --accent-light: #3B82F6;       /* Blue-500 */
+  --hover-bg: rgba(96, 175, 255, 0.1);
+
+  --button-bg: #3B82F6;          /* Tailwind's blue-500 */
+  --button-hover: #2563EB;       /* Tailwind's blue-600 */
+
+  --icon-color: #93C5FD;         /* Soft blue for icons */
+  --toggle-bg: #475569;
+
+  --shadow-color: rgba(0, 0, 0, 0.25);
+  --img-bright: 0.85;
   color: var(--text-color);
+  
 }
 
 html, body  {
   margin: 0 0;
   height: 100%; /* Ensures full height */
-  background-color: var(--background);
+  background-color: var(--background-gradient);
   overflow-x: hidden; /* Prevents horizontal scroll */
 }
 
 .light-mode {
-  background: var(--background);
+  background: var(--background-gradient);
   color: var(--text-color);
 }
 
@@ -103,15 +98,30 @@ html, body  {
   padding: 20px;
   border-radius: 10px;
   text-align: center;
-  background: var(--navbar-bg);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  background: var(--background-gradient);
+  background-size: 200% 200%; /* Needed for animation */
+  background-position: center;
+  box-shadow: 0 0 10px var(--shadow-color);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 2s ease;
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  background: var(--hover-bg);
+  box-shadow: 0 5px 15px var(--shadow-color);
+  filter: brightness(1.2); /* Increase brightness on hover */
+  animation: gradient-move 3s ease infinite;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .dark-mode .card {

@@ -31,4 +31,5 @@ type UserSession struct {
 	LeftAt    uint    `gorm:"default:NULL"`   // The time when the user leaves the session.
 	User      User    `gorm:"foreignKey:UserID"`
 	Session   Session `gorm:"foreignKey:SessionID"`
+	// mcaddr    string
 }
