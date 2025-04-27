@@ -8,9 +8,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light;
-  color: var(--text-color);
-  background: var(--background-gradient);
+  color-scheme: light dark;
+  color: #2C3E50;
+  background-color: #F7F9FC;
 
   --background: #F1F5F9;
   --background-gradient: linear-gradient(135deg, #F1F5F9 0%, #8cb9f5 100%);
@@ -22,63 +22,43 @@
   --hover-bg: rgba(45, 164, 78, 0.1);
   --button-bg: #2DA44E;
   --button-hover: #1E7A37;
-  --icon-color: #64748B;
+  --icon-color: #37547e;
   --toggle-bg: #CCC;
   --shadow-color: rgba(0, 0, 0, 0.1);
-  --img-bright: 0;
+  --img-bright:0;
 }
 
 /* Dark Mode */
 .dark-mode {
-  color-scheme: dark;
+  --background: #1E1E2E;
+  --navbar-bg: #252537;
+  --light-text-color: #c3c3c3;
+  --text-color: #EAEAEA;
+  --accent-color: #63B3ED;
+  --accent-light: #4299E1;
+  --hover-bg: rgba(66, 153, 225, 0.1);
+  --button-bg: #3182CE;
+  --button-hover: #2B6CB0;
+  --icon-color: #C0C5CE;
+  --toggle-bg: #555;
+  --img-bright:0.8;
+  --shadow-color: rgba(255, 255, 255, 0.1);
+  background: var(--background);
   color: var(--text-color);
-  background: var(--background-gradient);
-
-  --background: #1F2937; /* Dark Slate */
-  --background-gradient: linear-gradient(135deg, #1F2937 0%, #46285f 100%);
-  --navbar-bg: #46285f;
-  --text-color: #F3F4F6;
-  --light-text-color: #A1AFC6;
-
-  --accent-color: #60AFFF;       /* Sky Blue */
-  --accent-light: #3B82F6;       /* Blue-500 */
-  --hover-bg: rgba(96, 175, 255, 0.1);
-
-  --button-bg: #3B82F6;          /* Tailwind's blue-500 */
-  --button-hover: #2563EB;       /* Tailwind's blue-600 */
-
-  --icon-color: #93C5FD;         /* Soft blue for icons */
-  --toggle-bg: #475569;
-
-  --shadow-color: rgba(0, 0, 0, 0.25);
-  --img-bright: 0.85;
 }
 
-
-
-html, body {
-  margin: 0;
-  height: 100%;
-  background: var(--background-gradient);
-  overflow-x: hidden;
-  color: var(--text-color);
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+html, body  {
+  margin: 0 0;
+  height: 100%; /* Ensures full height */
+  background-color: var(--background);
+  overflow-x: hidden; /* Prevents horizontal scroll */
 }
 
-/* Light and dark mode toggles */
 .light-mode {
-  background: var(--background-gradient);
+  background: var(--background);
   color: var(--text-color);
 }
 
-.dark-mode {
-  background: var(--background-gradient);
-  color: var(--text-color);
-}
-
-/* Logo Styling */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -89,7 +69,6 @@ html, body {
   filter: drop-shadow(0 0 2em var(--accent-light));
 }
 
-/* Optional animation */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -98,60 +77,93 @@ html, body {
     transform: rotate(360deg);
   }
 }
+
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
 }
 
-/* Card Styling */
 .card {
   max-width: 400px;
   margin: 50px auto;
   padding: 20px;
   border-radius: 10px;
   text-align: center;
-  background: var(--background-gradient);
-  background-size: 200% 200%; /* Needed for animation */
-  background-position: center;
-  box-shadow: 0 0 10px var(--shadow-color);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 2s ease;
+  background: var(--navbar-bg);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px var(--shadow-color);
-  filter: brightness(1.2); /* Increase brightness on hover */
-  animation: gradient-move 3s ease infinite;
-  
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background: var(--hover-bg);
 }
 
-@keyframes gradient-move {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+.dark-mode .card {
+  background: #252537;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .card:hover {
+  box-shadow: 0 5px 20px rgba(255, 255, 255, 0.2);
+  background: rgba(66, 153, 225, 0.1);
 }
 
 
-/* Form Groups */
 .form-group {
   margin-bottom: 15px;
   text-align: left;
 }
+
 .form-group label {
   display: block;
   margin-bottom: 5px;
 }
 
-/* Inputs */
-.form-group input,
-.form-group select,
+/* General Input Style */
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--text-color);
+  border: 1px solid var(--icon-color);
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+/* Text Input and Password Styling */
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"],
+.form-group input[type="tel"] {
+  font-size: 16px;
+  height: 40px;
+}
+
+/* Checkbox and Radio Styling */
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+  width: auto; /* Make checkboxes and radio buttons smaller */
+  margin-right: 10px; /* Space between the input and label */
+  display: inline-block;
+}
+
+/* Select Input Styling */
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  background: var(--background);
+  color: var(--text-color);
+  border: 1px solid var(--icon-color);
+  font-size: 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Textarea Styling */
 .form-group textarea {
   width: 100%;
   padding: 10px;
@@ -160,28 +172,8 @@ html, body {
   color: var(--text-color);
   border: 1px solid var(--icon-color);
   font-size: 16px;
+  resize: vertical; /* Allow vertical resizing only */
   box-sizing: border-box;
-}
-
-/* Text + Email + Password + Tel */
-.form-group input[type="text"],
-.form-group input[type="password"],
-.form-group input[type="email"],
-.form-group input[type="tel"] {
-  height: 40px;
-}
-
-/* Checkbox / Radio */
-.form-group input[type="checkbox"],
-.form-group input[type="radio"] {
-  width: auto;
-  margin-right: 10px;
-  display: inline-block;
-}
-
-/* Textarea */
-.form-group textarea {
-  resize: vertical;
 }
 
 /* Focus States */
@@ -192,7 +184,6 @@ html, body {
   outline: none;
 }
 
-/* Buttons */
 .btn {
   width: 100%;
   padding: 10px;
@@ -202,14 +193,14 @@ html, body {
   cursor: pointer;
   background: var(--button-bg);
   color: white;
-  transition: background 0.3s ease;
 }
+
 .btn:hover {
   background: var(--button-hover);
 }
 
-/* Error message */
 .error {
   color: red;
   margin-top: 10px;
 }
+
