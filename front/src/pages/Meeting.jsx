@@ -23,14 +23,14 @@ const Meeting = () => {
     let socket;
     let stream;
   
-    const startMedia = async () => {
+    const startMedia = async (userId) => {
       try {
         // 1. Get access to camera/mic
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideoRef.current.srcObject = stream;
   
         // 2. Connect to WebSocket server
-        socket = new WebSocket(`ws://localhost:8080/b?userID=${userID}`);
+        socket = new WebSocket(`ws://localhost:8080/b?userID=${userId}`);
   
         socket.onopen = () => {
           console.log('WebSocket connected!');
@@ -67,6 +67,7 @@ const Meeting = () => {
       const data = await res.json();
       setName(data.user.Name);
       setUserID(data.user.ID);
+      startMedia(data.user.ID);
     };
 
     const fetchParticipants = async () => {
@@ -82,7 +83,6 @@ const Meeting = () => {
     if (!loading && isLoggedIn) {
       fetchUser();
       fetchParticipants();
-      startMedia();
     }
   }, [isLoggedIn, loading, navigate, id, logout]);
 
