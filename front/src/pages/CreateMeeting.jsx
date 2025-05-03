@@ -124,7 +124,7 @@ const CreateMeeting = () => {
               readOnly
               className="room-input"
             />
-            <button className="copy" onClick={copyToClipboard}>
+            <button type="button" className="copy" onClick={copyToClipboard}>
               <span data-text-end="Copied!" data-text-initial="Copy to clipboard" className="tooltip"></span>
               <span>
                 <svg

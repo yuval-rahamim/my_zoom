@@ -12,88 +12,126 @@ const Meeting = () => {
   const localVideoRef = useRef(null);
   const videoRefs = useRef({});
   const { id } = useParams();
-  const [userID,setUserID] = useState()
+  const [userID, setUserID] = useState();
   const navigate = useNavigate();
 
-  
-  // User auth and session
-  useEffect(() => {
-      // Handle access to camera and microphone
+  const initializedParticipants = useRef(new Set());
+
+  const startMedia = async (userId) => {
     let mediaRecorder;
     let socket;
     let stream;
-  
-    const startMedia = async (userId) => {
-      try {
-        // 1. Get access to camera/mic
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideoRef.current.srcObject = stream;
-  
-        // 2. Connect to WebSocket server
-        socket = new WebSocket(`ws://localhost:8080/b?userID=${userId}`);
-  
-        socket.onopen = () => {
-          console.log('WebSocket connected!');
-  
-          // 3. Start recording after WebSocket is open
-          mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
-  
-          mediaRecorder.ondataavailable = (event) => {
-            if (event.data && event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-              socket.send(event.data);
-            }
-          };
-  
-          mediaRecorder.start(1000); // record and send every 1 second
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideoRef.current.srcObject = stream;
+
+      socket = new WebSocket(`ws://localhost:8080/b?userID=${userId}`);
+
+      socket.onopen = () => {
+        console.log('WebSocket connected!');
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+            socket.send(event.data);
+          }
         };
-  
-        socket.onerror = (error) => {
-          console.error('WebSocket error:', error);
-        };
-  
-      } catch (err) {
-        console.error('Media error:', err);
-        Swal.fire('Error', 'Cannot access camera or microphone', 'error');
-      }
-    };
 
-    const fetchUser = async () => {
-      const res = await fetch('http://localhost:3000/users/cookie', { credentials: 'include' });
-      if (!res.ok) {
-        logout();
-        navigate(res.status === 401 ? '/login' : '/signup');
-        return;
-      }
-      const data = await res.json();
-      setName(data.user.Name);
-      setUserID(data.user.ID);
-      startMedia(data.user.ID);
-    };
+        mediaRecorder.start(1000);
+      };
 
-    const fetchParticipants = async () => {
-      const res = await fetch(`http://localhost:3000/sessions/${id}`, { credentials: 'include' });
-      if (!res.ok) {
-        navigate('/home');
-        return;
-      }
-      const data = await res.json();
-      setParticipants(data.participants);
-    };
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (err) {
+      console.error('Media error:', err);
+      Swal.fire('Error', 'Cannot access camera or microphone', 'error');
+    }
+  };
 
+  const fetchUser = async () => {
+    const res = await fetch('http://localhost:3000/users/cookie', { credentials: 'include' });
+    if (!res.ok) {
+      logout();
+      navigate(res.status === 401 ? '/login' : '/signup');
+      return;
+    }
+    const data = await res.json();
+    setName(data.user.Name);
+    setUserID(data.user.ID);
+    startMedia(data.user.ID);
+  };
+
+  const fetchParticipants = async () => {
+    const res = await fetch(`http://localhost:3000/sessions/${id}`, { credentials: 'include' });
+    if (!res.ok) {
+      navigate('/home');
+      return;
+    }
+    const data = await res.json();
+    setParticipants(data.participants);
+  };
+
+  useEffect(() => {
     if (!loading && isLoggedIn) {
       fetchUser();
       fetchParticipants();
     }
+
+    const ws = new WebSocket(`ws://localhost:3000/ws`);
+    ws.onopen = () => console.log('WebSocket connected!');
+    ws.onmessage = (event) => {
+      const message = event.data;
+      console.log('Received message:', message);
+      if (message.includes('has joined')) {
+        Swal.fire({
+          title: 'New Participant',
+          text: message,
+          icon: 'info',
+          confirmButtonText: 'OK',
+        });
+        fetchParticipants();
+      }
+    };
   }, [isLoggedIn, loading, navigate, id, logout]);
 
-  // Initialize DASH players for participants
   useEffect(() => {
-    participants.forEach((p, i) => {
-      if (p.streamURL && videoRefs.current[p.id]) {
-        const player = dashjs.MediaPlayer().create();
-        player.initialize(videoRefs.current[p.id], p.streamURL, true);
+    initializedParticipants.current.clear(); // Reset on participant change
+
+    const interval = setInterval(() => {
+      let anyNew = false;
+
+      participants.forEach((p) => {
+        if (initializedParticipants.current.has(p.id)) return;
+
+        try {
+          if (p.streamURL && videoRefs.current[p.id]) {
+            const player = dashjs.MediaPlayer().create();
+            player.initialize(videoRefs.current[p.id], p.streamURL, true);
+
+            player.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+              console.error(`DASH error for ${p.name}:`, e);
+            });
+
+            initializedParticipants.current.add(p.id);
+            anyNew = true;
+            console.log(`Initialized stream for ${p.name}`);
+          }
+        } catch (err) {
+          console.error(`Error initializing player for ${p.name}:`, err);
+        }
+      });
+
+      if (initializedParticipants.current.size === participants.length) {
+        console.log('All streams initialized.');
+        clearInterval(interval);
       }
-    });
+
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [participants]);
 
   return (
@@ -114,11 +152,7 @@ const Meeting = () => {
         {participants.map((p) => (
           <div key={p.id} className="video-card">
             <h4>{p.name}</h4>
-            <video
-              ref={(el) => (videoRefs.current[p.id] = el)}
-              controls
-              className="video-player"
-            />
+            <video ref={(el) => (videoRefs.current[p.id] = el)} autoPlay muted playsInline className="video-player" />
             {!p.streamURL && <p>Waiting for stream...</p>}
           </div>
         ))}

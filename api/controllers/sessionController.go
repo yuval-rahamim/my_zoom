@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/xml"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 	"yuval/inits"
 	"yuval/models"
@@ -17,6 +19,34 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
+
+// Represents a simplified version of the MPD XML structure
+type MPD struct {
+	XMLName xml.Name `xml:"MPD"`
+	Period  Period   `xml:"Period"`
+}
+
+type Period struct {
+	AdaptationSets []AdaptationSet `xml:"AdaptationSet"`
+}
+
+type AdaptationSet struct {
+	SegmentTemplate SegmentTemplate `xml:"SegmentTemplate"`
+}
+
+type SegmentTemplate struct {
+	SegmentTimeline SegmentTimeline `xml:"SegmentTimeline"`
+}
+
+type SegmentTimeline struct {
+	S []Segment `xml:"S"`
+}
+
+type Segment struct {
+	T int64 `xml:"t,attr"` // start time
+	D int64 `xml:"d,attr"` // duration
+	R int64 `xml:"r,attr"` // repeat count (optional)
+}
 
 // Function to generate a multicast address based on user ID
 func generateMulticastIP(userID uint) string {
@@ -282,6 +312,79 @@ func JoinSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully joined the session", "session_id": session.ID})
 }
 
+// Start cleaner in background
+func StartDashCleaner(dashDir string) {
+	a := 0
+	for {
+		time.Sleep(10 * time.Second) // run every 10 seconds
+		count := cleanOldSegments(dashDir)
+		log.Printf("Cleaned %d old segments\n", count)
+		if count == 0 {
+			print("no segments to clean\n")
+			a++
+		}
+		if a > 10 {
+			print("no segments to clean for 10 times\n")
+			break
+		}
+	}
+}
+
+// Now cleanOldSegments RETURNS an int
+func cleanOldSegments(dashDir string) int {
+	mpdPath := filepath.Join(dashDir, "stream.mpd")
+
+	// Read MPD file
+	data, err := os.ReadFile(mpdPath)
+	if err != nil {
+		return 0
+	}
+
+	var mpd MPD
+	err = xml.Unmarshal(data, &mpd)
+	if err != nil {
+		return 0
+	}
+
+	// Build set of valid segments
+	validSegments := make(map[string]struct{})
+
+	for _, adaptationSet := range mpd.Period.AdaptationSets {
+		for _, segment := range adaptationSet.SegmentTemplate.SegmentTimeline.S {
+			segmentName := buildSegmentName(segment.T) // customize this if needed
+			validSegments[segmentName] = struct{}{}
+		}
+	}
+
+	// List all .m4s files
+	files, err := os.ReadDir(dashDir)
+	if err != nil {
+		return 0
+	}
+
+	count := 0
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".m4s") {
+			if _, ok := validSegments[file.Name()]; !ok {
+				err := os.Remove(filepath.Join(dashDir, file.Name()))
+				if err == nil {
+					count++
+					log.Printf("Deleted old segment: %s\n", file.Name())
+				} else {
+					log.Printf("Failed to delete segment: %s, error: %v\n", file.Name(), err)
+				}
+			}
+		}
+	}
+
+	return count
+}
+
+// Build the segment filename based on timestamp or ID
+func buildSegmentName(timestamp int64) string {
+	return fmt.Sprintf("chunk-stream0-%d.m4s", timestamp)
+}
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // allow all connections
@@ -327,20 +430,8 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		"-sc_threshold", "0",
 		"-c:a", "aac",
 		"-f", "mpegts",
-		udpURL,
+		udpURL, // 	"udp://235.235.235.235:55?pkt_size=1316"
 	)
-	// Start FFmpeg
-	// cmd := exec.Command("ffmpeg",
-	// 	"-f", "webm", // input format
-	// 	"-i", "pipe:0", // read from stdin
-	// 	"-c:v", "libx264",
-	// 	"-preset", "veryfast",
-	// 	"-g", "30",
-	// 	"-sc_threshold", "0",
-	// 	"-c:a", "aac",
-	// 	"-f", "mpegts",
-	// 	"udp://235.235.235.235:55?pkt_size=1316", // multicast address
-	// )
 
 	ffmpegIn, err := cmd.StdinPipe()
 	if err != nil {
@@ -398,7 +489,13 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// Run conversion in a goroutine to allow immediate HTTP response
 	go func() {
 		_ = utils.RunCommand(cmd)
+		// Broadcast to all clients in the session that a new user has joined
+		// message := fmt.Sprintf("Dash is ready for %d", userID)
+		// websocket2.BroadcastMessage(sessionID, message)
 	}()
+	// go func() {
+	// 	StartDashCleaner(dashOutputDir)
+	// }()
 }
 
 // ServeDashFile serves the DASH manifest file (.mpd) to the client
