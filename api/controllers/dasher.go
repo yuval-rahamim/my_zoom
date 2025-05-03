@@ -52,14 +52,16 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	cmd := exec.Command("ffmpeg",
 		"-f", "webm",
+		"-analyzeduration", "1500000",
 		"-i", "pipe:0",
+		"-fflags", "nobuffer+flush_packets+discardcorrupt",
 		"-c:v", "libx264",
-		"-preset", "veryfast",
+		"-preset", "ultrafast",
 		"-g", "30",
 		"-sc_threshold", "0",
 		"-c:a", "aac",
 		"-f", "mpegts",
-		udpURL, // 	"udp://235.235.235.235:55?pkt_size=1316"
+		udpURL,
 	)
 
 	ffmpegIn, err := cmd.StdinPipe()
@@ -113,7 +115,7 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
 	multicastIp := generateMulticastIP(userID)
-	cmd := fmt.Sprintf(`ffmpeg -i udp://%s:55 -map 0 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 2 -use_template 1 -use_timeline 1 %s/stream.mpd`, multicastIp, dashOutputDir)
+	cmd := fmt.Sprintf(`ffmpeg -re -i udp://%s:55 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -use_template 1 -use_timeline 1 %s/stream.mpd`, multicastIp, dashOutputDir)
 
 	// Run conversion in a goroutine to allow immediate HTTP response
 	go func() {

@@ -72,7 +72,22 @@ const Meeting = () => {
     }
     const data = await res.json();
     setParticipants(data.participants);
-  };
+  
+    data.participants.forEach((p) => {
+      if (p.streamURL && !initializedParticipants.current.has(p.id)) {
+        const videoElement = videoRefs.current[p.id];
+        if (videoElement) {
+          const player = dashjs.MediaPlayer().create();
+          player.initialize(videoElement, p.streamURL, true);
+          initializedParticipants.current.add(p.id);
+          player.on('error', (e) => {
+            console.error(`DASH error for ${p.name}:`, e);
+          });
+          
+        }
+      }
+    });
+  };  
 
   useEffect(() => {
     if (!loading && isLoggedIn) {
@@ -94,53 +109,6 @@ const Meeting = () => {
       }
     };
   }, [isLoggedIn, loading, navigate, id, logout]);
-
-  useEffect(() => {
-    initializedParticipants.current.clear(); // Reset on participant change
-    let lastParticipantsLength = participants.length;
-
-    const initializeStreams = () => {
-      let anyNew = false;
-
-      participants.forEach((p) => {
-        
-
-        try {
-          if (p.streamURL && videoRefs.current[p.id]) {
-            const player = dashjs.MediaPlayer().create();
-            player.initialize(videoRefs.current[p.id], p.streamURL, true);
-
-            player.on(dashjs.MediaPlayer.events.ERROR, (e) => {
-              console.error(`DASH error for ${p.name}:`, e);
-            });
-
-            initializedParticipants.current.add(p.id);
-            anyNew = true;
-            console.log(`Initialized stream for ${p.name}`);
-          }
-        } catch (err) {
-          console.error(`Error initializing player for ${p.name}:`, err);
-        }
-      });
-
-      // Stop checking if the number of participants hasn't changed and all streams are initialized
-      if (initializedParticipants.current.size === participants.length && participants.length === lastParticipantsLength) {
-        console.log('All streams initialized. No changes detected.');
-        clearInterval(interval); // Stop the interval once all streams are initialized and no new participants join
-      } else if (participants.length !== lastParticipantsLength) {
-        // If the participants list changes, reset and continue checking
-        lastParticipantsLength = participants.length;
-        console.log('Participant count changed. Rechecking streams...');
-      }
-    };
-
-    const interval = setInterval(initializeStreams, 1000);
-
-    // return () => {
-    //   clearInterval(interval); // Cleanup the interval on unmount or participants change
-    // };
-  }, [participants]); // Re-run when the participants list changes
-
   return (
     <div className="meeting-container">
       <div className="top-bar">
@@ -159,8 +127,17 @@ const Meeting = () => {
         {participants.map((p) => (
           <div key={p.id} className="video-card">
             <h4>{p.name}</h4>
-            <video ref={(el) => (videoRefs.current[p.id] = el)} autoPlay muted playsInline className="video-player" />
-            {!p.streamURL && <p>Waiting for stream...</p>}
+            <video
+              ref={(el) => (videoRefs.current[p.id] = el)}
+              autoPlay
+              playsInline
+              className="video-player"
+            />
+            {!p.streamURL ? (
+              <p>Waiting for stream...</p>
+            ) : (
+              <p className="live-indicator">Live</p>
+            )}
           </div>
         ))}
       </div>
