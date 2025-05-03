@@ -86,7 +86,13 @@ func HandleConnections(c *gin.Context) {
 	hub.sessionClient[sessionID] = append(hub.sessionClient[sessionID], conn)
 	hub.mu.Unlock()
 
+	// Cleanup when the connection is closed
 	defer func() {
+		// Broadcast that the user has left the session
+		message := fmt.Sprintf("User %d has left the session %d", userIDUint, sessionID)
+		BroadcastMessage(sessionID, message)
+
+		// Unregister the connection
 		hub.unregister <- conn
 		hub.mu.Lock()
 		// Remove client from the session map
@@ -100,7 +106,7 @@ func HandleConnections(c *gin.Context) {
 		conn.Close()
 	}()
 
-	// Handle incoming messages (optional)
+	// Handle incoming messages
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {

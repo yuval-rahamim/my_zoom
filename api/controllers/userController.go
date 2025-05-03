@@ -57,8 +57,8 @@ func GetUserIDFromToken(c *gin.Context) (string, error) {
 	}
 
 	// Step 4: Extend the cookie's expiration time
-	expirationTime := time.Now().Add(30 * time.Minute)
-	c.SetCookie("JWT", cookieValue, int(expirationTime.Unix()), "/", "", false, true)
+	maxAge := 30 * 60 // 30 minutes
+	c.SetCookie("JWT", cookieValue, maxAge, "/", "", false, true)
 
 	return userID, nil
 }

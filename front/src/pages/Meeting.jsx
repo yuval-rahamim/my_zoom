@@ -86,12 +86,10 @@ const Meeting = () => {
       const message = event.data;
       console.log('Received message:', message);
       if (message.includes('has joined')) {
-        Swal.fire({
-          title: 'New Participant',
-          text: message,
-          icon: 'info',
-          confirmButtonText: 'OK',
-        });
+        console.log('Participant joined:', message);
+        fetchParticipants();
+      } else if (message.includes('has left')) {
+        console.log('Participant left:', message);
         fetchParticipants();
       }
     };
@@ -99,12 +97,13 @@ const Meeting = () => {
 
   useEffect(() => {
     initializedParticipants.current.clear(); // Reset on participant change
+    let lastParticipantsLength = participants.length;
 
-    const interval = setInterval(() => {
+    const initializeStreams = () => {
       let anyNew = false;
 
       participants.forEach((p) => {
-        if (initializedParticipants.current.has(p.id)) return;
+        
 
         try {
           if (p.streamURL && videoRefs.current[p.id]) {
@@ -124,15 +123,23 @@ const Meeting = () => {
         }
       });
 
-      if (initializedParticipants.current.size === participants.length) {
-        console.log('All streams initialized.');
-        clearInterval(interval);
+      // Stop checking if the number of participants hasn't changed and all streams are initialized
+      if (initializedParticipants.current.size === participants.length && participants.length === lastParticipantsLength) {
+        console.log('All streams initialized. No changes detected.');
+        clearInterval(interval); // Stop the interval once all streams are initialized and no new participants join
+      } else if (participants.length !== lastParticipantsLength) {
+        // If the participants list changes, reset and continue checking
+        lastParticipantsLength = participants.length;
+        console.log('Participant count changed. Rechecking streams...');
       }
+    };
 
-    }, 1000);
+    const interval = setInterval(initializeStreams, 1000);
 
-    return () => clearInterval(interval);
-  }, [participants]);
+    // return () => {
+    //   clearInterval(interval); // Cleanup the interval on unmount or participants change
+    // };
+  }, [participants]); // Re-run when the participants list changes
 
   return (
     <div className="meeting-container">
