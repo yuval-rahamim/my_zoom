@@ -112,36 +112,41 @@ const Meeting = () => {
       if (p.streamURL && !initializedParticipants.current.has(p.id)) {
         const videoElement = videoRefs.current[p.id];
         if (videoElement) {
+          // Wait for the MPD file to be available before initializing the player
           const mpdExists = await waitForMPD(p.streamURL);
           if (mpdExists) {
             const player = dashjs.MediaPlayer().create();
-            
             player.updateSettings({
               streaming: {
-                // delay: {
-                //   liveDelay: 30,
-                //   useSuggestedPresentationDelay: true
-                // },
-                // liveCatchup:{
-                // enabled: true,
-                // },
-                retryIntervals: {
-                  MPD: 10000
+                lowLatencyEnabled: true,
+                liveDelay: 1,
+                retryIntervals: { MPD: 500 },
+                manifest: {
+                  cacheLoadThresholds: {
+                    video: 0,
+                    audio: 0
+                  }
                 }
               }
             });
-    
+  
             player.initialize(videoElement, p.streamURL, true);
             initializedParticipants.current.add(p.id);
-    
+            // player.on('error', (e) => {
+            //   console.error(`DASH error for ${p.name}:`, e);
+            // });
+  
+            // Start face detection once metadata is loaded
             videoElement.onloadedmetadata = () => {
               const canvas = canvasRefs.current[p.id];
               if (canvas) startFaceDetection(videoElement, canvas);
             };
+          } else {
+            // console.error(`MPD file not found for participant ${p.name}`);
           }
         }
       }
-    });    
+    });
   };  
 
   // 1. Load models only once on mount

@@ -15,6 +15,8 @@ import (
 // Function to generate a multicast address based on user ID
 func generateMulticastIP(userID uint) string {
 	baseIP := [4]int{235, 0, 0, 0}
+
+	baseIP[2] += int(userID / 255)
 	baseIP[3] += int(userID % 255)
 	return fmt.Sprintf("%d.%d.%d.%d", baseIP[0], baseIP[1], baseIP[2], baseIP[3])
 }
