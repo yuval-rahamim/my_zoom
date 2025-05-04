@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"yuval/utils"
+	"yuval/websocket2"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -115,8 +116,12 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
 	multicastIp := generateMulticastIP(userID)
-	cmd := fmt.Sprintf(`ffmpeg -re -i udp://%s:55 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -use_template 1 -use_timeline 1 %s/stream.mpd`, multicastIp, dashOutputDir)
+	cmd := fmt.Sprintf(
+		`ffmpeg -re -i udp://%s:55 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 -use_template 1 -use_timeline 1 %s/stream.mpd`,
+		multicastIp, dashOutputDir)
 
+	// Broadcast to all clients in the session that a new user has joined
+	websocket2.BroadcastMessage(sessionID, "stream started")
 	// Run conversion in a goroutine to allow immediate HTTP response
 	go func() {
 		_ = utils.RunCommand(cmd)

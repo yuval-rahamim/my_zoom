@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
 import * as dashjs from 'dashjs';
+import * as faceapi from 'face-api.js';
 import './Meeting.css';
 
 const Meeting = () => {
@@ -11,11 +12,28 @@ const Meeting = () => {
   const [name, setName] = useState('');
   const localVideoRef = useRef(null);
   const videoRefs = useRef({});
+  const canvasRefs = useRef({});
   const { id } = useParams();
   const [userID, setUserID] = useState();
   const navigate = useNavigate();
 
   const initializedParticipants = useRef(new Set());
+
+  const startFaceDetection = (videoElement, canvas) => {
+    const displaySize = { width: videoElement.videoWidth, height: videoElement.videoHeight };
+    faceapi.matchDimensions(canvas, displaySize);
+
+    const interval = setInterval(async () => {
+      if (videoElement.paused || videoElement.ended) return;
+      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions());
+      const resized = faceapi.resizeResults(detections, displaySize);
+
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      faceapi.draw.drawDetections(canvas, resized);
+    }, 500);
+
+    return interval;
+  };
 
   const startMedia = async (userId) => {
     let mediaRecorder;
@@ -25,6 +43,12 @@ const Meeting = () => {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideoRef.current.srcObject = stream;
+
+      // Wait for video to load metadata before starting face detection
+      localVideoRef.current.onloadedmetadata = () => {
+        const canvas = document.getElementById('local-face-canvas');
+        startFaceDetection(localVideoRef.current, canvas);
+      };
 
       socket = new WebSocket(`ws://localhost:8080/b?userID=${userId}`);
 
@@ -64,6 +88,17 @@ const Meeting = () => {
     startMedia(data.user.ID);
   };
 
+  async function waitForMPD(streamURL, maxRetries = 10, delay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const res = await fetch(streamURL, { method: 'HEAD' });
+        if (res.ok) return true;
+      } catch (_) {}
+      await new Promise(res => setTimeout(res, delay));
+    }
+    return false;
+  }
+  
   const fetchParticipants = async () => {
     const res = await fetch(`http://localhost:3000/sessions/${id}`, { credentials: 'include' });
     if (!res.ok) {
@@ -73,42 +108,84 @@ const Meeting = () => {
     const data = await res.json();
     setParticipants(data.participants);
   
-    data.participants.forEach((p) => {
+    data.participants.forEach(async (p) => {
       if (p.streamURL && !initializedParticipants.current.has(p.id)) {
         const videoElement = videoRefs.current[p.id];
         if (videoElement) {
-          const player = dashjs.MediaPlayer().create();
-          player.initialize(videoElement, p.streamURL, true);
-          initializedParticipants.current.add(p.id);
-          player.on('error', (e) => {
-            console.error(`DASH error for ${p.name}:`, e);
-          });
-          
+          // Wait for the MPD file to be available before initializing the player
+          const mpdExists = await waitForMPD(p.streamURL);
+          if (mpdExists) {
+            const player = dashjs.MediaPlayer().create();
+            player.updateSettings({
+              streaming: {
+                lowLatencyEnabled: true,
+                liveDelay: 1,
+                retryIntervals: { MPD: 500 },
+                manifest: {
+                  cacheLoadThresholds: {
+                    video: 0,
+                    audio: 0
+                  }
+                }
+              }
+            });
+  
+            player.initialize(videoElement, p.streamURL, true);
+            initializedParticipants.current.add(p.id);
+            // player.on('error', (e) => {
+            //   console.error(`DASH error for ${p.name}:`, e);
+            // });
+  
+            // Start face detection once metadata is loaded
+            videoElement.onloadedmetadata = () => {
+              const canvas = canvasRefs.current[p.id];
+              if (canvas) startFaceDetection(videoElement, canvas);
+            };
+          } else {
+            // console.error(`MPD file not found for participant ${p.name}`);
+          }
         }
       }
     });
   };  
 
+  // 1. Load models only once on mount
+  useEffect(() => {
+    const loadModels = async () => {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+      
+    };
+    loadModels();
+  }, []);
+
+  // 2. Handle auth and start media when isLoggedIn is true and loading is done
   useEffect(() => {
     if (!loading && isLoggedIn) {
       fetchUser();
+    }
+  }, [isLoggedIn, loading]);
+
+  // 3. Fetch participants only when session id changes and user is logged in
+  useEffect(() => {
+    if (isLoggedIn && id) {
       fetchParticipants();
     }
+  }, [id, isLoggedIn]);
 
+  // 4. WebSocket listener for participant updates (once on mount)
+  useEffect(() => {
     const ws = new WebSocket(`ws://localhost:3000/ws`);
     ws.onopen = () => console.log('WebSocket connected!');
     ws.onmessage = (event) => {
       const message = event.data;
-      console.log('Received message:', message);
-      if (message.includes('has joined')) {
-        console.log('Participant joined:', message);
-        fetchParticipants();
-      } else if (message.includes('has left')) {
-        console.log('Participant left:', message);
+      if (message.includes('has joined') || message.includes('has left') || message.includes('stream started')) {
         fetchParticipants();
       }
     };
-  }, [isLoggedIn, loading, navigate, id, logout]);
+
+    return () => ws.close(); // Cleanup on unmount
+  }, []);
+
   return (
     <div className="meeting-container">
       <div className="top-bar">
@@ -120,19 +197,28 @@ const Meeting = () => {
         {/* Local Video */}
         <div className="video-card">
           <h4>{name}</h4>
-          <video ref={localVideoRef} autoPlay muted playsInline className="video-player" />
+          <div className="video-wrapper">
+            <video ref={localVideoRef} autoPlay muted playsInline className="video-player" />
+            <canvas id="local-face-canvas" className="overlay-canvas" />
+          </div>
         </div>
 
-        {/* Participants */}
+        {/* Remote Participants */}
         {participants.map((p) => (
           <div key={p.id} className="video-card">
             <h4>{p.name}</h4>
-            <video
-              ref={(el) => (videoRefs.current[p.id] = el)}
-              autoPlay
-              playsInline
-              className="video-player"
-            />
+            <div className="video-wrapper">
+              <video
+                ref={(el) => (videoRefs.current[p.id] = el)}
+                autoPlay
+                playsInline
+                className="video-player"
+              />
+              <canvas
+                ref={(el) => (canvasRefs.current[p.id] = el)}
+                className="overlay-canvas"
+              />
+            </div>
             {!p.streamURL ? (
               <p>Waiting for stream...</p>
             ) : (
