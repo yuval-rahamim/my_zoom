@@ -53,6 +53,7 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	cmd := exec.Command("ffmpeg",
 		"-f", "webm",
+		// "-avioflags", "direct",
 		"-analyzeduration", "1500000",
 		"-i", "pipe:0",
 		"-fflags", "nobuffer+flush_packets+discardcorrupt",
@@ -61,7 +62,9 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		"-g", "30",
 		"-sc_threshold", "0",
 		"-c:a", "aac",
+		// "-b:a 128k",
 		"-f", "mpegts",
+		"-fflags", "nobuffer+flush_packets+discardcorrupt",
 		udpURL,
 	)
 
@@ -117,7 +120,9 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
 	multicastIp := generateMulticastIP(userID)
 	cmd := fmt.Sprintf(
-		`ffmpeg -re -i udp://%s:55 -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 -use_template 1 -use_timeline 1 %s/stream.mpd`,
+		`ffmpeg -i udp://%s:55 -codec:v libx264 -preset ultrafast -intra-refresh 0 -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -live 1 -remove_at_exit 1 -ldash 1 -dash_segment_type mp4 -use_template 1 -use_timeline 0 -streaming 1 %s/stream.mpd`,
+
+		// `ffmpeg -re -i udp://%s:55 -preset ultrafast -tune zerolatency -c copy -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 -use_template 1 -use_timeline 1 %s/stream.mpd`,
 		multicastIp, dashOutputDir)
 
 	// Broadcast to all clients in the session that a new user has joined
