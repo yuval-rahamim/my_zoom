@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"yuval/controllers"
+	"yuval/dasher"
 	"yuval/inits"
 	"yuval/middleware"
 	"yuval/models"
@@ -44,7 +45,7 @@ func main() {
 	r.GET("/ws", middleware.AuthMiddleware(), websocket2.HandleConnections)
 
 	go func() {
-		http.HandleFunc("/b", controllers.HandleWebsocket)
+		http.HandleFunc("/b", dasher.HandleWebsocket)
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	// Public routes
@@ -66,7 +67,7 @@ func main() {
 	r.Static("/uploads", "./uploads")
 
 	// r.POST("/video/upload", middleware.AuthMiddleware(), controllers.ConvertToMPEGTS)
-	r.POST("/video/stream", middleware.AuthMiddleware(), controllers.ServeDashFile)
+	r.POST("/video/stream", middleware.AuthMiddleware(), dasher.ServeDashFile)
 
 	// Admin routes (Require both authentication & manager check)
 	r.DELETE("/users/delete", middleware.AuthMiddleware(), middleware.ManagerMiddlewar(), controllers.UsersDelete)

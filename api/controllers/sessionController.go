@@ -13,7 +13,7 @@ import (
 )
 
 // Function to generate a multicast address based on user ID
-func generateMulticastIP(userID uint) string {
+func GenerateMulticastIP(userID uint) string {
 	baseIP := [4]int{235, 0, 0, 0}
 
 	baseIP[2] += int(userID / 255)
@@ -157,8 +157,7 @@ func GetSessionDetails(c *gin.Context) {
 	})
 }
 
-// CreateUserSession ensures that a user is not in another session before joining.
-func CreateUserSession(userID uint, sessionID uint) error {
+func DeleteUserSessionCurrent(userID uint, sessionID uint) error {
 	var existingUserSession models.UserSession
 
 	// Check if the user is already in another session
@@ -169,7 +168,15 @@ func CreateUserSession(userID uint, sessionID uint) error {
 			return fmt.Errorf("failed to leave previous session: %v", err)
 		}
 	}
+	return nil
+}
 
+// CreateUserSession ensures that a user is not in another session before joining.
+func CreateUserSession(userID uint, sessionID uint) error {
+	err := DeleteUserSessionCurrent(userID, sessionID)
+	if err != nil {
+		return err
+	}
 	// Create new user session
 	newUserSession := models.UserSession{
 		UserID:    userID,
@@ -218,7 +225,7 @@ func CreateSession(c *gin.Context) {
 	var existingSession models.Session
 	for {
 		// Generate the multicast IP based on the session ID
-		mcAddr := generateMulticastIP(session.ID)
+		mcAddr := GenerateMulticastIP(session.ID)
 		// Check if this address is already in use
 		result := inits.DB.Where("mc_addr = ?", mcAddr).First(&existingSession)
 		if result.Error != nil { // No existing session with the same multicast address

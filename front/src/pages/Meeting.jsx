@@ -25,11 +25,12 @@ const Meeting = () => {
 
     const interval = setInterval(async () => {
       if (videoElement.paused || videoElement.ended) return;
-      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions());
+      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
       const resized = faceapi.resizeResults(detections, displaySize);
 
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       faceapi.draw.drawDetections(canvas, resized);
+      faceapi.draw.drawFaceExpressions(canvas, resized)
     }, 500);
 
     return interval;
@@ -139,7 +140,10 @@ const Meeting = () => {
             // Start face detection once metadata is loaded
             videoElement.onloadedmetadata = () => {
               const canvas = canvasRefs.current[p.id];
-              if (canvas) startFaceDetection(videoElement, canvas);
+              if (canvas) {
+                startFaceDetection(videoElement, canvas);
+              }
+              
             };
           } else {
             // console.error(`MPD file not found for participant ${p.name}`);
@@ -153,6 +157,9 @@ const Meeting = () => {
   useEffect(() => {
     const loadModels = async () => {
       await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+      await faceapi.nets.faceExpressionNet.loadFromUri('/models');
     };
     loadModels();
   }, []);
