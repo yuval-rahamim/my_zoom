@@ -48,14 +48,22 @@ func AddFriend(c *gin.Context) {
 	var existing models.Friend
 	if err := inits.DB.Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
 		user.ID, friend.ID, friend.ID, user.ID).First(&existing).Error; err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Already friends"})
+		if existing.Accepted {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Already friends"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Friend request already sent, waiting for acceptance"})
 		return
 	}
 
-	// Create friendship
-	inits.DB.Create(&models.Friend{UserID: user.ID, FriendID: friend.ID})
+	// Create pending friendship (Accepted = false)
+	inits.DB.Create(&models.Friend{
+		UserID:   user.ID,
+		FriendID: friend.ID,
+		Accepted: false,
+	})
 
-	c.JSON(http.StatusOK, gin.H{"message": "Friend added successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Friend request sent"})
 }
 
 // DeleteFriend removes the friendship from both sides
@@ -129,7 +137,49 @@ func CheckFriendship(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"friends": false})
 }
 
-// GetFriends returns a list of all friends for the authenticated user
+func AcceptFriendship(c *gin.Context) {
+	var body struct {
+		Name string `json:"name"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
+		return
+	}
+
+	// Authenticate user
+	isAuth, userIDStr := IsUserAuthenticatedGetId(c)
+	if !isAuth {
+		return
+	}
+
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid user ID"})
+		return
+	}
+
+	// Find the user who sent the friend request
+	var sender models.User
+	if err := inits.DB.Where("name = ?", body.Name).First(&sender).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+		return
+	}
+
+	// Only accept if the current user is the recipient of a pending request
+	var request models.Friend
+	if err := inits.DB.
+		Where("user_id = ? AND friend_id = ? AND accepted = false", sender.ID, userIDUint).
+		First(&request).Error; err == nil {
+		request.Accepted = true
+		inits.DB.Save(&request)
+		c.JSON(http.StatusOK, gin.H{"message": "Friendship accepted"})
+		return
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"message": "No pending friendship request from this user"})
+}
+
 func GetFriends(c *gin.Context) {
 	isAuth, userIDStr := IsUserAuthenticatedGetId(c)
 	if !isAuth {
@@ -142,31 +192,40 @@ func GetFriends(c *gin.Context) {
 		return
 	}
 
-	// Find all friendships involving the user
 	var connections []models.Friend
 	if err := inits.DB.Where("user_id = ? OR friend_id = ?", userIDUint, userIDUint).Find(&connections).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching friendships"})
 		return
 	}
 
-	// Extract the other user's ID from each connection
-	friendIDs := make([]uint, 0)
+	type FriendInfo struct {
+		User                 models.User `json:"user"`
+		Accepted             bool        `json:"accepted"`
+		ThisUserNeedToAccept bool        `json:"thisUserNeedToAccept"`
+	}
+
+	var friendInfos []FriendInfo
 	for _, conn := range connections {
+		var friendID uint
 		if conn.UserID == uint(userIDUint) {
-			friendIDs = append(friendIDs, conn.FriendID)
+			friendID = conn.FriendID
 		} else {
-			friendIDs = append(friendIDs, conn.UserID)
+			friendID = conn.UserID
 		}
+
+		var friend models.User
+		if err := inits.DB.First(&friend, friendID).Error; err != nil {
+			continue
+		}
+
+		thisUserNeedsToAccept := !conn.Accepted && conn.FriendID == uint(userIDUint)
+
+		friendInfos = append(friendInfos, FriendInfo{
+			User:                 friend,
+			Accepted:             conn.Accepted,
+			ThisUserNeedToAccept: thisUserNeedsToAccept,
+		})
 	}
 
-	// Get user details for all friend IDs
-	var friends []models.User
-	if len(friendIDs) > 0 {
-		if err := inits.DB.Where("id IN ?", friendIDs).Find(&friends).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching friend details"})
-			return
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"friends": friends})
+	c.JSON(http.StatusOK, gin.H{"friends": friendInfos})
 }

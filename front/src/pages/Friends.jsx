@@ -13,7 +13,7 @@ function Friends() {
   useEffect(() => {
     if (!friends) return;
     const filtered = friends.filter(friend =>
-      friend.Name.toLowerCase().includes(searchTerm.toLowerCase())
+      friend.user.Name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredFriends(filtered);
   }, [searchTerm, friends]);
@@ -31,6 +31,8 @@ function Friends() {
       });
       const data = await res.json();
       setFriends(data.friends);
+      
+      console.log('Fetched friends:', data.friends);
     } catch (err) {
       console.error('Error fetching friends:', err);
       Swal.fire('Error', 'Failed to fetch friends.', 'error');
@@ -80,6 +82,27 @@ function Friends() {
     }
   };
 
+  const acceptFriend = async (name) => {
+    try {
+      const res = await fetch('http://localhost:3000/friends/accept', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name }),
+      });
+      if (res.ok) {
+        fetchFriends();
+        Swal.fire('Accepted', 'Friend request accepted.', 'success');
+      } else {
+        const errData = await res.json();
+        Swal.fire('Error', errData.message || 'Failed to accept friend.', 'error');
+      }
+    } catch (err) {
+      console.error('Error accepting friend:', err);
+      Swal.fire('Error', 'Something went wrong when accepting the friend.', 'error');
+    }
+  }
+
   return (
     <div className="card">
       <h2>Your Friends</h2>
@@ -102,9 +125,18 @@ function Friends() {
 
       <ul className="friend-list">
         {filteredFriends.map((friend) => (
-          <li key={friend.ID}>
-            {friend.Name}
-            <button onClick={() => deleteFriend(friend.Name)}>Remove</button>
+          <li key={friend.user.ID}>
+            <span>{friend.user.Name}</span>
+            {friend.accepted ? (
+              <span className="accepted"> (Accepted)</span>
+            ) : (<>
+              <span className="pending"> (Pending)</span>
+              {friend.thisUserNeedToAccept && (
+                <button onClick={() => acceptFriend(friend.user.Name)}>accept</button>
+              )}
+              </>
+            )}
+            <button onClick={() => deleteFriend(friend.user.Name)}>Remove</button>
           </li>
         ))}
       </ul>

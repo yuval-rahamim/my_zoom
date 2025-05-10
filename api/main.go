@@ -19,7 +19,7 @@ import (
 func init() {
 	inits.InitConfig()
 	inits.ConnectToDB()
-	inits.DB.AutoMigrate(&models.User{}, &models.Session{}, &models.UserSession{}) // Ensure you migrate all relevant models
+	inits.DB.AutoMigrate(&models.User{}, &models.Session{}, &models.UserSession{}, &models.Friend{}) // Ensure you migrate all relevant models
 }
 
 func main() {
@@ -58,6 +58,11 @@ func main() {
 	r.GET("/users/cookie", middleware.AuthMiddleware(), controllers.User)
 	r.POST("/users/logout", middleware.AuthMiddleware(), controllers.LogOut)
 	r.GET("/users/:name", middleware.AuthMiddleware(), controllers.GetUserByName)
+
+	r.GET("/friends/all", middleware.AuthMiddleware(), controllers.GetFriends)
+	r.POST("/friends/add", middleware.AuthMiddleware(), controllers.AddFriend)
+	r.POST("/friends/accept", middleware.AuthMiddleware(), controllers.AcceptFriendship)
+	r.DELETE("/friends/delete", middleware.AuthMiddleware(), controllers.DeleteFriend)
 
 	// Session routes (Require authentication)
 	r.POST("/sessions/create", middleware.AuthMiddleware(), controllers.CreateSession)

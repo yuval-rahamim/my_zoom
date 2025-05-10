@@ -5,7 +5,7 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userUpdated, setUserUpdated] = useState(false); // 👈 Add a trigger for user updates
+  const [userUpdated, setUserUpdated] = useState(false); //  Add a trigger for user updates
 
   useEffect(() => {
     const checkAuth = async () => {
