@@ -26,7 +26,7 @@ function Friends() {
 
   const fetchFriends = async () => {
     try {
-      const res = await fetch('http://localhost:3000/friends/all', {
+      const res = await fetch('https://localhost:3000/friends/all', {
         credentials: 'include',
       });
       const data = await res.json();
@@ -41,7 +41,7 @@ function Friends() {
 
   const addFriend = async () => {
     try {
-      const res = await fetch('http://localhost:3000/friends/add', {
+      const res = await fetch('https://localhost:3000/friends/add', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ function Friends() {
 
   const deleteFriend = async (name) => {
     try {
-      const res = await fetch('http://localhost:3000/friends/delete', {
+      const res = await fetch('https://localhost:3000/friends/delete', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -84,7 +84,7 @@ function Friends() {
 
   const acceptFriend = async (name) => {
     try {
-      const res = await fetch('http://localhost:3000/friends/accept', {
+      const res = await fetch('https://localhost:3000/friends/accept', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

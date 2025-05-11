@@ -46,8 +46,9 @@ func main() {
 
 	go func() {
 		http.HandleFunc("/b", dasher.HandleWebsocket)
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		log.Fatal(http.ListenAndServeTLS(":8080", "keys/localhost.crt", "keys/localhost.key", nil))
 	}()
+
 	// Public routes
 	r.POST("/users/login", controllers.Login)
 	r.POST("/users/signup", controllers.UsersCreate)
@@ -80,5 +81,9 @@ func main() {
 
 	// Start server
 	port := viper.GetInt("server.port")
-	r.Run(fmt.Sprintf(":%d", port))
+	err := r.RunTLS(fmt.Sprintf(":%d", port), "keys/localhost.crt", "keys/localhost.key")
+	if err != nil {
+		log.Fatalf("Failed to run HTTPS server: %v", err)
+	}
+
 }

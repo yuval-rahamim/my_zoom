@@ -51,7 +51,7 @@ const Meeting = () => {
         startFaceDetection(localVideoRef.current, canvas);
       };
 
-      socket = new WebSocket(`ws://localhost:8080/b?userID=${userId}`);
+      socket = new WebSocket(`wss://localhost:8080/b?userID=${userId}`);
 
       socket.onopen = () => {
         console.log('WebSocket connected!');
@@ -77,7 +77,7 @@ const Meeting = () => {
   };
 
   const fetchUser = async () => {
-    const res = await fetch('http://localhost:3000/users/cookie', { credentials: 'include' });
+    const res = await fetch('https://localhost:3000/users/cookie', { credentials: 'include' });
     if (!res.ok) {
       logout();
       navigate(res.status === 401 ? '/login' : '/signup');
@@ -101,7 +101,7 @@ const Meeting = () => {
   }
   
   const fetchParticipants = async () => {
-    const res = await fetch(`http://localhost:3000/sessions/${id}`, { credentials: 'include' });
+    const res = await fetch(`https://localhost:3000/sessions/${id}`, { credentials: 'include' });
     if (!res.ok) {
       navigate('/home');
       return;
@@ -180,7 +180,7 @@ const Meeting = () => {
 
   // 4. WebSocket listener for participant updates (once on mount)
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:3000/ws`);
+    const ws = new WebSocket(`wss://localhost:3000/ws`);
     ws.onopen = () => console.log('WebSocket connected!');
     ws.onmessage = (event) => {
       const message = event.data;

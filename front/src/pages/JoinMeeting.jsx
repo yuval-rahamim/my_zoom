@@ -15,7 +15,7 @@ const JoinMeeting = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users/cookie', {
+        const response = await fetch('https://localhost:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
@@ -68,7 +68,7 @@ const JoinMeeting = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/sessions/join`, {
+      const response = await fetch(`https://localhost:3000/sessions/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

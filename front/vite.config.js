@@ -1,16 +1,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "fs";
+import path from "path";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5174, // Set frontend port to 5174
+    port: 5174,
+    https: {
+      key: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "localhost.key")),
+      cert: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "localhost.crt"))      
+    },
     proxy: {
       "/api": {
-        target: "http://localhost:3000", // Proxy backend API requests
+        target: "https://localhost:3000",
         changeOrigin: true,
-        secure: false
+        secure: false // accept self-signed certificates
       }
     }
   }

@@ -20,7 +20,7 @@ const Navbar = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users/cookie', {
+        const response = await fetch('https://localhost:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
@@ -53,7 +53,7 @@ const Navbar = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:3000/users/logout', {
+      const response = await fetch('https://localhost:3000/users/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -75,7 +75,7 @@ const Navbar = () => {
         <Link className="navbar-brand" to="/">
           <img className="logo-img" src={logo} width="60" alt="logo" />
         </Link>
-        <Link to="/home" className="navbar-brand">Zoom</Link>
+        <Link to="/home" className="navbar-brand">ZoomZ</Link>
 
         {/* Hamburger Icon */}
         <div className={`hamburger ${isMenuOpen ? 'active' : ''}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>

@@ -22,7 +22,7 @@ const EditUser = () => {
       try {
         // Fetch the logged-in user
         const currentUserResponse = await fetch(
-          "http://localhost:3000/users/cookie",
+          "https://localhost:3000/users/cookie",
           {
             method: "GET",
             credentials: "include",
@@ -50,7 +50,7 @@ const EditUser = () => {
 
           }
           const targetUserResponse = await fetch(
-            `http://localhost:3000/users/${name}`,
+            `https://localhost:3000/users/${name}`,
             {
               method: "GET",
               credentials: "include",
@@ -102,7 +102,7 @@ const EditUser = () => {
     }
   
     try {
-      const endpoint = `http://localhost:3000/users/update`; // Unified endpoint
+      const endpoint = `https://localhost:3000/users/update`; // Unified endpoint
   
       const response = await fetch(endpoint, {
         method: "PUT",

@@ -16,7 +16,7 @@ function Home() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users/cookie', {
+        const response = await fetch('https://localhost:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
