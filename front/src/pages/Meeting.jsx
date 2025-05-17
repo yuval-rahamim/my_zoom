@@ -102,14 +102,15 @@ const Meeting = () => {
   }
 
   const initializeShakaPlayer = async (videoElement, url) => {
-    const player = new shaka.Player(videoElement);
+    const player = new shaka.Player();
+    await player.attach(videoElement);    
 
     player.configure({
       streaming: {
         bufferingGoal: 15,
         rebufferingGoal: 5,
         lowLatencyMode: true,
-        jumpLargeGaps: true
+        alwaysStreamText: true
       },
       abr: {
         enabled: true // Automatically chooses best quality
@@ -123,6 +124,10 @@ const Meeting = () => {
 
     try {
       await player.load(url);
+  
+      // Seek to live edge after stream is loaded
+      player.getMediaElement().currentTime = player.seekRange().end;
+  
     } catch (err) {
       console.error('Error loading stream:', err);
     }
