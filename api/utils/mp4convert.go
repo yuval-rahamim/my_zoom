@@ -32,6 +32,7 @@ func ConvertSessionDashToMP4(sessionID uint) {
 		outputPath := filepath.Join(vodFolder, fmt.Sprintf("%d.mp4", userID))
 		//ffmpeg -y -i %s -c copy -bsf:a aac_adtstoasc -err_detect ignore_err -fflags +discardcorrupt %s
 
+		//ffmpeg -re -i input.mp4 -map 0:v -map 0:a -map 0:v -map 0:a -map 0:v -map 0:a -b:v:0 800k -s:v:0 640x360  -profile:v:0 main -b:v:1 1500k -s:v:1 1280x720 -profile:v:1 main -b:v:2 3000k -s:v:2 1920x1080 -profile:v:2 high -b:a 128k -c:a aac -c:v libx264 -keyint_min 48 -g 48 -sc_threshold 0 -use_timeline 1 -use_template 1 -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=a"
 		cmd := fmt.Sprintf(
 			`ffmpeg -y -i %s -c copy -bsf:a aac_adtstoasc -err_detect ignore_err -fflags +discardcorrupt %s`,
 			mpdPath, outputPath)

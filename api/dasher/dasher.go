@@ -140,6 +140,58 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// }()
 }
 
+// ConvertToMPEGDASH listens to a multicast MPEG-TS stream and converts it into adaptive MPEG-DASH segments
+// func ConvertToMPEGDASH(sessionID uint, userID uint) {
+// 	// Set up output directory
+// 	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+// 	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+// 	dashOutputDir := filepath.Join(userPath, "dash")
+
+// 	if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
+// 		fmt.Printf("Failed to create directory: %v\n", err)
+// 		return
+// 	}
+
+// 	multicastIp := controllers.GenerateMulticastIP(userID)
+
+// 	args := []string{
+// 		"-re",
+// 		"-i", fmt.Sprintf("udp://%s:55", multicastIp),
+
+// 		"-filter_complex", "[0:v]split=3[v1][v2][v3];[v1]scale=1280:720[v720];[v2]scale=854:480[v480];[v3]scale=426:240[v240]",
+
+// 		"-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "1500k",
+// 		"-map", "[v480]", "-c:v:1", "libx264", "-b:v:1", "800k",
+// 		"-map", "[v240]", "-c:v:2", "libx264", "-b:v:2", "400k",
+// 		"-map", "0:a?", "-c:a", "aac", "-b:a", "128k",
+
+// 		"-use_timeline", "1",
+// 		"-use_template", "1",
+// 		"-window_size", "5",
+// 		"-extra_window_size", "5",
+// 		"-remove_at_exit", "0",
+// 		"-adaptation_sets", "id=0,streams=v id=1,streams=a",
+// 		"-init_seg_name", "init_$RepresentationID$.mp4",
+// 		"-media_seg_name", "chunk_$RepresentationID$_$Number$.m4s",
+// 		"-f", "dash",
+// 		"stream.mpd", // relative, since we set cmd.Dir
+// 	}
+
+// 	cmd := exec.Command("ffmpeg", args...)
+// 	cmd.Dir = dashOutputDir // output goes here
+// 	cmd.Stdout = os.Stdout
+// 	cmd.Stderr = os.Stderr
+
+// 	websocket2.BroadcastMessage(sessionID, "stream started")
+
+// 	go func() {
+// 		err := cmd.Run()
+// 		if err != nil {
+// 			fmt.Printf("FFmpeg failed: %v\n", err)
+// 		}
+// 	}()
+// }
+
 // ServeDashFile serves the DASH manifest file (.mpd) to the client
 func ServeDashFile(c *gin.Context) {
 	var requestData struct {

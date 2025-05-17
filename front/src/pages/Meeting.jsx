@@ -2,8 +2,8 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../components/AuthContext';
-import * as dashjs from 'dashjs';
 import * as faceapi from 'face-api.js';
+import shaka from 'shaka-player';
 import './Meeting.css';
 
 const Meeting = () => {
@@ -25,12 +25,15 @@ const Meeting = () => {
 
     const interval = setInterval(async () => {
       if (videoElement.paused || videoElement.ended) return;
-      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
+      const detections = await faceapi
+        .detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceExpressions();
       const resized = faceapi.resizeResults(detections, displaySize);
 
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       faceapi.draw.drawDetections(canvas, resized);
-      faceapi.draw.drawFaceExpressions(canvas, resized)
+      faceapi.draw.drawFaceExpressions(canvas, resized);
     }, 500);
 
     return interval;
@@ -45,7 +48,6 @@ const Meeting = () => {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideoRef.current.srcObject = stream;
 
-      // Wait for video to load metadata before starting face detection
       localVideoRef.current.onloadedmetadata = () => {
         const canvas = document.getElementById('local-face-canvas');
         startFaceDetection(localVideoRef.current, canvas);
@@ -55,7 +57,6 @@ const Meeting = () => {
 
       socket.onopen = () => {
         console.log('WebSocket connected!');
-
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9,opus' });
 
         mediaRecorder.ondataavailable = (event) => {
@@ -89,71 +90,75 @@ const Meeting = () => {
     startMedia(data.user.ID);
   };
 
-  async function waitForMPD(streamURL, maxRetries = 10, delay = 1000) {
+  async function waitForMPD(streamURL, maxRetries = 30, delay = 1000) {
     for (let i = 0; i < maxRetries; i++) {
       try {
         const res = await fetch(streamURL, { method: 'HEAD' });
         if (res.ok) return true;
       } catch (_) {}
-      await new Promise(res => setTimeout(res, delay));
+      await new Promise((res) => setTimeout(res, delay));
     }
     return false;
   }
-  
+
+  const initializeShakaPlayer = async (videoElement, url) => {
+    const player = new shaka.Player(videoElement);
+
+    player.configure({
+      streaming: {
+        bufferingGoal: 15,
+        rebufferingGoal: 5,
+        lowLatencyMode: true,
+        jumpLargeGaps: true
+      },
+      abr: {
+        enabled: true // Automatically chooses best quality
+      }
+    });
+    
+
+    player.addEventListener('error', (e) => {
+      console.error('Shaka Player error', e.detail);
+    });
+
+    try {
+      await player.load(url);
+    } catch (err) {
+      console.error('Error loading stream:', err);
+    }
+  };
+
   const fetchParticipants = async () => {
     const res = await fetch(`https://localhost:3000/sessions/${id}`, { credentials: 'include' });
     if (!res.ok) {
       navigate('/home');
       return;
     }
+
     const data = await res.json();
     setParticipants(data.participants);
-  
+
     data.participants.forEach(async (p) => {
       if (p.streamURL && !initializedParticipants.current.has(p.id)) {
         const videoElement = videoRefs.current[p.id];
         if (videoElement) {
-          // Wait for the MPD file to be available before initializing the player
           const mpdExists = await waitForMPD(p.streamURL);
           if (mpdExists) {
-            const player = dashjs.MediaPlayer().create();
-            player.updateSettings({
-              streaming: {
-                lowLatencyEnabled: true,
-                liveDelay: 1,
-                retryIntervals: { MPD: 500 },
-                manifest: {
-                  cacheLoadThresholds: {
-                    video: 0,
-                    audio: 0
-                  }
-                }
-              }
-            });
-  
-            player.initialize(videoElement, p.streamURL, true);
+            await initializeShakaPlayer(videoElement, p.streamURL);
             initializedParticipants.current.add(p.id);
-            // player.on('error', (e) => {
-            //   console.error(`DASH error for ${p.name}:`, e);
-            // });
-  
-            // Start face detection once metadata is loaded
+
             videoElement.onloadedmetadata = () => {
               const canvas = canvasRefs.current[p.id];
               if (canvas) {
                 startFaceDetection(videoElement, canvas);
               }
-              
             };
-          } else {
-            // console.error(`MPD file not found for participant ${p.name}`);
           }
         }
       }
     });
-  };  
+  };
 
-  // 1. Load models only once on mount
   useEffect(() => {
     const loadModels = async () => {
       await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
@@ -164,21 +169,18 @@ const Meeting = () => {
     loadModels();
   }, []);
 
-  // 2. Handle auth and start media when isLoggedIn is true and loading is done
   useEffect(() => {
     if (!loading && isLoggedIn) {
       fetchUser();
     }
   }, [isLoggedIn, loading]);
 
-  // 3. Fetch participants only when session id changes and user is logged in
   useEffect(() => {
     if (isLoggedIn && id) {
       fetchParticipants();
     }
   }, [id, isLoggedIn]);
 
-  // 4. WebSocket listener for participant updates (once on mount)
   useEffect(() => {
     const ws = new WebSocket(`wss://localhost:3000/ws`);
     ws.onopen = () => console.log('WebSocket connected!');
@@ -188,8 +190,7 @@ const Meeting = () => {
         fetchParticipants();
       }
     };
-
-    return () => ws.close(); // Cleanup on unmount
+    return () => ws.close();
   }, []);
 
   return (
@@ -218,7 +219,9 @@ const Meeting = () => {
                 ref={(el) => (videoRefs.current[p.id] = el)}
                 autoPlay
                 playsInline
+                muted={false}
                 className="video-player"
+                controls={false}
               />
               <canvas
                 ref={(el) => (canvasRefs.current[p.id] = el)}
