@@ -12,6 +12,7 @@ const Meeting = () => {
   const [name, setName] = useState('');
   const localVideoRef = useRef(null);
   const videoRefs = useRef({});
+  const player = useRef();
   const canvasRefs = useRef({});
   const { id } = useParams();
   const [userID, setUserID] = useState();
@@ -110,38 +111,51 @@ const Meeting = () => {
     setParticipants(data.participants);
   
     data.participants.forEach(async (p) => {
-      if (p.streamURL && !initializedParticipants.current.has(p.id) && p.id !== userID) {
+      if (p.streamURL && !initializedParticipants.current.has(p.id) ) {
         const videoElement = videoRefs.current[p.id];
         if (videoElement) {
           // Wait for the MPD file to be available before initializing the player
           const mpdExists = await waitForMPD(p.streamURL);
           if (mpdExists) {
-            const player = dashjs.MediaPlayer().create();
-            player.updateSettings({
+            player.current = dashjs.MediaPlayer().create();
+            console.log(player.current);
+            player.current.updateSettings({
               streaming: {
-                lowLatencyEnabled: true,
-                liveDelay: 1,
+                liveUpdateTimeThresholdInMilliseconds:1000,
+                // lowLatencyEnabled: true,
+                // liveDelay: 1,
                 retryIntervals: { MPD: 500 },
-                manifest: {
-                  cacheLoadThresholds: {
-                    video: 0,
-                    audio: 0
-                  }
-                }
+                // manifest: {
+                //   cacheLoadThresholds: {
+                //     video: 0,
+                //     audio: 0
+                //   }
+                // }
               },
-              abr: {
-                enabled: true,  // Enable adaptive bitrate switching
-              }
+              // abr: {
+              //   enabled: true,  // Enable adaptive bitrate switching
+              // }
             });
   
-            player.initialize(videoElement, p.streamURL, true);
+            player.current.initialize(videoElement, p.streamURL, true);
             initializedParticipants.current.add(p.id);
-            // player.on('error', (e) => {
+            // player.current.on('error', (e) => {
             //   console.error(`DASH error for ${p.name}:`, e);
             // });
   
+            player.current.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+              console.log("AVI 1111111");
+              // if (player.current.isDynamic()) {
+                player.current.seekToOriginalLive();
+              // }
+            });
+            
             // Start face detection once metadata is loaded
+            
             videoElement.onloadedmetadata = () => {
+              console.log("AVI 2222222");
+              player.current.seekToOriginalLive();
+
               const canvas = canvasRefs.current[p.id];
               if (canvas) {
                 startFaceDetection(videoElement, canvas);
@@ -164,7 +178,31 @@ const Meeting = () => {
       await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
       await faceapi.nets.faceExpressionNet.loadFromUri('/models');
     };
+
+    const seekLiveInterval = setInterval(() => {
+
+      console.log("AVI 3333333");
+      player.current.seekToOriginalLive();
+      
+    },10000);
+
+    const printInterval = setInterval(() => {
+try{
+
+  console.log("getCurrentLiveLatency",player.current.getCurrentLiveLatency());
+
+  
+}catch(e){console.log("SHIT",e)}
+      
+    },1000);
+
+
     loadModels();
+    return () => {
+
+      clearTimeout(seekLiveInterval);
+      clearTimeout(printInterval);
+    }
   }, []);
 
   // 2. Handle auth and start media when isLoggedIn is true and loading is done
@@ -213,7 +251,7 @@ const Meeting = () => {
         </div>
 
         {/* Remote Participants */}
-        {participants.filter((p) => p.id !== userID).map((p) => (
+        {participants.map((p) => (
           <div key={p.id} className="video-card">
             <h4>{p.name}</h4>
             <div className="video-wrapper">
@@ -222,11 +260,12 @@ const Meeting = () => {
                 autoPlay
                 playsInline
                 className="video-player"
+                controls={true}
               />
-              <canvas
+              {/* <canvas
                 ref={(el) => (canvasRefs.current[p.id] = el)}
                 className="overlay-canvas"
-              />
+              /> */}
             </div>
             {!p.streamURL ? (
               <p>Waiting for stream...</p>
