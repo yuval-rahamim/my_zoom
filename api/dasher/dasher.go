@@ -122,7 +122,7 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
 	multicastIp := controllers.GenerateMulticastIP(userID)
 	cmd := fmt.Sprintf(
-		`ffmpeg -re -i udp://%s:55?localaddr=myzoom.co.il -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 %s/stream.mpd`,
+		`ffmpeg -re -i udp://%s:55?localaddr=myzoom.co.il -filter_complex "[0:v]split=2[v1][v2];[v1]scale=854:480[v1out];[v2]scale=1280:720[v2out]" -map "[v1out]" -c:v:0 libx264 -b:v:0 800k -preset ultrafast -tune zerolatency -c:a:0 aac -b:a:0 128k -map "[v2out]" -c:v:1 libx264 -b:v:1 2500k -preset ultrafast -tune zerolatency -c:a:1 aac -b:a:1 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 %s/stream.mpd`,
 		multicastIp, dashOutputDir,
 	)
 
