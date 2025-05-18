@@ -6,16 +6,17 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: 'myzoom.co.il',
     port: 5174,
     https: {
-      key: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "localhost.key")),
-      cert: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "localhost.crt"))      
+      key: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "myzoom.key")),
+      cert: fs.readFileSync(path.resolve("C:/Users/yuval/Documents/GitHub/my_zoom/api/keys", "myzoom.crt"))      
     },
     proxy: {
       "/api": {
-        target: "https://localhost:3000",
+        target: "https://myzoom.co.il:3000",
         changeOrigin: true,
-        secure: false // accept self-signed certificates
+        secure: true // accept self-signed certificates
       }
     }
   }

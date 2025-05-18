@@ -23,7 +23,7 @@ const CreateMeeting = () => {
 
     const fetchUser = async () => {
       try {
-        const response = await fetch('https://localhost:3000/users/cookie', {
+        const response = await fetch('https://myzoom.co.il:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
@@ -80,7 +80,7 @@ const CreateMeeting = () => {
     }
 
     try {
-      const response = await fetch('https://localhost:3000/sessions/create', {
+      const response = await fetch('https://myzoom.co.il:3000/sessions/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

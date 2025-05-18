@@ -32,7 +32,7 @@ const SignUp = () => {
     e.preventDefault();
     if (!validateForm()) return;
     try {
-      const response = await fetch('https://localhost:3000/users/signup', {
+      const response = await fetch('https://myzoom.co.il:3000/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, password, ImgPath: Profile}),

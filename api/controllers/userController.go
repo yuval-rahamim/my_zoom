@@ -38,6 +38,7 @@ func GetUserIDFromToken(c *gin.Context) (string, error) {
 	// Step 1: Retrieve the JWT cookie
 	cookieValue, err := c.Cookie("JWT")
 	if err != nil {
+		print("err")
 		return "", err
 	}
 
@@ -180,7 +181,7 @@ func Login(c *gin.Context) {
 	}
 
 	// Set cookie to expire in 30 minutes
-	c.SetCookie("JWT", token, 30*60, "/", "localhost", false, true)
+	c.SetCookie("JWT", token, 30*60, "/", "myzoom.co.il", false, true)
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }

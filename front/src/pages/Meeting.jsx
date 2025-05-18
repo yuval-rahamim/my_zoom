@@ -53,7 +53,7 @@ const Meeting = () => {
         startFaceDetection(localVideoRef.current, canvas);
       };
 
-      socket = new WebSocket(`wss://localhost:8080/b?userID=${userId}`);
+      socket = new WebSocket(`wss://myzoom.co.il:8080/b?userID=${userId}`);
 
       socket.onopen = () => {
         console.log('WebSocket connected!');
@@ -78,7 +78,7 @@ const Meeting = () => {
   };
 
   const fetchUser = async () => {
-    const res = await fetch('https://localhost:3000/users/cookie', { credentials: 'include' });
+    const res = await fetch('https://myzoom.co.il:3000/users/cookie', { credentials: 'include' });
     if (!res.ok) {
       logout();
       navigate(res.status === 401 ? '/login' : '/signup');
@@ -103,6 +103,7 @@ const Meeting = () => {
 
   const initializeShakaPlayer = async (videoElement, url) => {
     const player = new shaka.Player();
+    console.log(shaka.Player.version)
     await player.attach(videoElement);    
 
     player.configure({
@@ -126,15 +127,19 @@ const Meeting = () => {
       await player.load(url);
   
       // Seek to live edge after stream is loaded
-      player.getMediaElement().currentTime = player.seekRange().end;
-  
+      // const seekRange = player.seekRange();
+      // const desiredTime = seekRange.start + 20; // Seek to 5 seconds after the start of the seekable range
+      // player.getMediaElement().currentTime = desiredTime;
+      const seekRange = player.seekRange();
+      player.getMediaElement().currentTime = seekRange.end - 5; // Seek to 5 seconds before live edge
+      
     } catch (err) {
       console.error('Error loading stream:', err);
     }
   };
 
   const fetchParticipants = async () => {
-    const res = await fetch(`https://localhost:3000/sessions/${id}`, { credentials: 'include' });
+    const res = await fetch(`https://myzoom.co.il:3000/sessions/${id}`, { credentials: 'include' });
     if (!res.ok) {
       navigate('/home');
       return;
@@ -187,7 +192,7 @@ const Meeting = () => {
   }, [id, isLoggedIn]);
 
   useEffect(() => {
-    const ws = new WebSocket(`wss://localhost:3000/ws`);
+    const ws = new WebSocket(`wss://myzoom.co.il:3000/ws`);
     ws.onopen = () => console.log('WebSocket connected!');
     ws.onmessage = (event) => {
       const message = event.data;
@@ -226,12 +231,12 @@ const Meeting = () => {
                 playsInline
                 muted={false}
                 className="video-player"
-                controls={false}
+                controls={true}
               />
-              <canvas
+              {/* <canvas
                 ref={(el) => (canvasRefs.current[p.id] = el)}
                 className="overlay-canvas"
-              />
+              /> */}
             </div>
             {!p.streamURL ? (
               <p>Waiting for stream...</p>

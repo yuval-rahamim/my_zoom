@@ -15,7 +15,7 @@ const JoinMeeting = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('https://localhost:3000/users/cookie', {
+        const response = await fetch('https://myzoom.co.il:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
@@ -68,7 +68,7 @@ const JoinMeeting = () => {
     }
 
     try {
-      const response = await fetch(`https://localhost:3000/sessions/join`, {
+      const response = await fetch(`https://myzoom.co.il:3000/sessions/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ const JoinMeeting = () => {
             <button type="button" className="paste" onClick={pasteFromClipboard}>
               <span data-text-end="Copied!" data-text-initial="paste from clipboard!" className="tooltip"></span>
               <span>
-                <svg fill="currentColor" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 502 502" xml:space="preserve">
+                <svg fill="currentColor" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 502 502" xmlSpace="preserve">
                   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                   <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                   <g id="SVGRepo_iconCarrier"> <g> <g> <g> 

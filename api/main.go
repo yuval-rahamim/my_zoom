@@ -28,7 +28,7 @@ func main() {
 	r := gin.Default()
 
 	// Enable CORS for frontend
-	r.SetTrustedProxies([]string{"127.0.0.1"})
+	r.SetTrustedProxies([]string{"myzoom.co.il"})
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			return true // Allow all origins dynamically
@@ -46,7 +46,7 @@ func main() {
 
 	go func() {
 		http.HandleFunc("/b", dasher.HandleWebsocket)
-		log.Fatal(http.ListenAndServeTLS(":8080", "keys/localhost.crt", "keys/localhost.key", nil))
+		log.Fatal(http.ListenAndServeTLS(":8080", "keys/myzoom.crt", "keys/myzoom.key", nil))
 	}()
 
 	// Public routes
@@ -81,7 +81,7 @@ func main() {
 
 	// Start server
 	port := viper.GetInt("server.port")
-	err := r.RunTLS(fmt.Sprintf(":%d", port), "keys/localhost.crt", "keys/localhost.key")
+	err := r.RunTLS(fmt.Sprintf(":%d", port), "keys/myzoom.crt", "keys/myzoom.key")
 	if err != nil {
 		log.Fatalf("Failed to run HTTPS server: %v", err)
 	}

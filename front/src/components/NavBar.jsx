@@ -20,7 +20,7 @@ const Navbar = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch('https://localhost:3000/users/cookie', {
+        const response = await fetch('https://myzoom.co.il:3000/users/cookie', {
           method: 'GET',
           credentials: 'include',
         });
@@ -53,7 +53,7 @@ const Navbar = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('https://localhost:3000/users/logout', {
+      const response = await fetch('https://myzoom.co.il:3000/users/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

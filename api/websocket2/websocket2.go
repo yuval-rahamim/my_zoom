@@ -9,7 +9,6 @@ import (
 	"time"
 	"yuval/inits"
 	"yuval/models"
-	"yuval/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -194,5 +193,5 @@ func BroadcastMessage(sessionID uint, message string) {
 func HandleSessionEnd(sessionID uint) {
 	// Perform cleanup, analytics, logging, etc.
 	log.Printf("Performing one-time cleanup for ended session %d\n", sessionID)
-	utils.ConvertSessionDashToMP4(sessionID)
+	// utils.ConvertSessionDashToMP4(sessionID)
 }

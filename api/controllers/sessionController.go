@@ -119,7 +119,7 @@ func GetSessionDetails(c *gin.Context) {
 	var currentUser models.User
 	if err := inits.DB.Where("id = ?", userID).First(&currentUser).Error; err == nil {
 		// Construct stream URL for the current user
-		currentUserStreamURL := fmt.Sprintf("https://localhost:3000/uploads/%d/%d/dash/stream.mpd", session.ID, userID)
+		currentUserStreamURL := fmt.Sprintf("https://myzoom.co.il:3000/uploads/%d/%d/dash/stream.mpd", session.ID, userID)
 		response = append(response, map[string]interface{}{
 			"streamURL": currentUserStreamURL,
 			"name":      currentUser.Name,
@@ -140,7 +140,7 @@ func GetSessionDetails(c *gin.Context) {
 		}
 
 		// Construct stream URL for each participant
-		streamURL := fmt.Sprintf("https://localhost:3000/uploads/%d/%d/dash/stream.mpd", session.ID, participant.UserID)
+		streamURL := fmt.Sprintf("https://myzoom.co.il:3000/uploads/%d/%d/dash/stream.mpd", session.ID, participant.UserID)
 
 		// Add the participant to the response
 		response = append(response, map[string]interface{}{
