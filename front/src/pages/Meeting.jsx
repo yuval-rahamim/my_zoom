@@ -177,7 +177,30 @@ const Meeting = () => {
       await faceapi.nets.ageGenderNet.loadFromUri('/models');
       await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
     };
-    loadModels()
+//     const seekLiveInterval = setInterval(() => {
+
+//       console.log("AVI 3333333");
+//       player.current.seekToOriginalLive();
+      
+//     },10000);
+
+//     const printInterval = setInterval(() => {
+// try{
+
+//   console.log("getCurrentLiveLatency",player.current.getCurrentLiveLatency());
+
+  
+// }catch(e){console.log("SHIT",e)}
+      
+//     },1000);
+
+
+    loadModels();
+//     return () => {
+
+//       clearTimeout(seekLiveInterval);
+//       clearTimeout(printInterval);
+//     }
   }, []);
 
   // 2. Handle auth and start media when isLoggedIn is true and loading is done
