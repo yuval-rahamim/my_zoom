@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"yuval/controllers"
+	"yuval/websocket2"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -143,6 +144,9 @@ func ConvertToMPEGDASH(sessionID uint, userID uint, ch chan []byte) {
 		log.Println("Failed to get ffmpeg stdin:", err)
 		return
 	}
+
+	// Broadcast to all clients in the session that a new user has joined
+	websocket2.BroadcastMessage(sessionID, "stream started")
 
 	cmd.Stderr = log.Writer()
 	go func() {

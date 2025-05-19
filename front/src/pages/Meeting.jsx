@@ -131,19 +131,8 @@ const Meeting = () => {
             player.current.updateSettings({
               streaming: {
                 liveUpdateTimeThresholdInMilliseconds:1000,
-                // lowLatencyEnabled: true,
-                // liveDelay: 1,
                 retryIntervals: { MPD: 500 },
-                // manifest: {
-                //   cacheLoadThresholds: {
-                //     video: 0,
-                //     audio: 0
-                //   }
-                // }
               },
-              // abr: {
-              //   enabled: true,  // Enable adaptive bitrate switching
-              // }
             });
   
             player.current.initialize(videoElement, p.streamURL, true);
@@ -153,17 +142,16 @@ const Meeting = () => {
             // });
   
             player.current.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
-              console.log("AVI 1111111");
+              
               // if (player.current.isDynamic()) {
-                player.current.seekToOriginalLive();
+                // player.current.seekToOriginalLive();
               // }
             });
             
             // Start face detection once metadata is loaded
             
             videoElement.onloadedmetadata = () => {
-              console.log("AVI 2222222");
-              player.current.seekToOriginalLive();
+              // player.current.seekToOriginalLive();
 
               const canvas = canvasRefs.current[p.id];
               if (canvas) {
@@ -189,31 +177,7 @@ const Meeting = () => {
       await faceapi.nets.ageGenderNet.loadFromUri('/models');
       await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
     };
-
-    const seekLiveInterval = setInterval(() => {
-
-      console.log("AVI 3333333");
-      player.current.seekToOriginalLive();
-      
-    },10000);
-
-    const printInterval = setInterval(() => {
-try{
-
-  console.log("getCurrentLiveLatency",player.current.getCurrentLiveLatency());
-
-  
-}catch(e){console.log("SHIT",e)}
-      
-    },1000);
-
-
-    loadModels();
-    return () => {
-
-      clearTimeout(seekLiveInterval);
-      clearTimeout(printInterval);
-    }
+    loadModels()
   }, []);
 
   // 2. Handle auth and start media when isLoggedIn is true and loading is done
