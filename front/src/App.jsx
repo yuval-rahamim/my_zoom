@@ -14,6 +14,7 @@ import {AuthProvider} from './components/AuthContext'
 
 import './styles/App.css';
 import Friends from './pages/Friends.jsx';
+import Vod from './pages/Vod.jsx';
 
 const App = () => {
   return ( 
@@ -31,6 +32,7 @@ const App = () => {
               <Route path="/joinmeeting" element={<JoinMeeting />}></Route>
               <Route path="/edit/:name?" element={<EditUser />} />
               <Route path="/m/:id?" element={<Meeting />}></Route>
+              <Route path="/vod" element={<Vod />}></Route>
             </Routes>
           </div>
         </AuthProvider>

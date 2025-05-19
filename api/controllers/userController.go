@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 	"yuval/inits"
@@ -404,22 +405,32 @@ func GetUserMeetings(c *gin.Context) {
 
 		var participants []map[string]interface{}
 		for _, part := range sessionParticipants {
+			mp4path := fmt.Sprintf("videos/%d/%d.mp4", sessionID, part.UserID)
+			if _, err := os.Stat(mp4path); err != nil {
+				// If .ts file does not exist, skip this user
+				continue
+			}
+
 			var user models.User
 			if err := inits.DB.First(&user, part.UserID).Error; err != nil {
 				continue
 			}
+			fmt.Print("2")
 
 			participants = append(participants, map[string]interface{}{
 				"id":        user.ID,
 				"name":      user.Name,
-				"video_url": fmt.Sprintf("/videos/meeting_%d_user_%d.mp4", sessionID, user.ID),
+				"video_url": "/" + mp4path,
 			})
 		}
 
-		result = append(result, map[string]interface{}{
-			"id":           session.Name,
-			"participants": participants,
-		})
+		// Only include the session if it has participants with valid streams
+		if len(participants) > 0 {
+			result = append(result, map[string]interface{}{
+				"id":           session.Name,
+				"participants": participants,
+			})
+		}
 	}
 
 	c.JSON(http.StatusOK, result)

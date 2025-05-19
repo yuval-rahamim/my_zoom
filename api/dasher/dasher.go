@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"yuval/controllers"
-	"yuval/utils"
-	"yuval/websocket2"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -48,22 +46,98 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+	dashOutputDir := filepath.Join(userPath, "dash")
 
-	multicastIP := controllers.GenerateMulticastIP(userID)
-	udpURL := fmt.Sprintf("udp://%s:55?localaddr=myzoom.co.il&pkt_size=1316", multicastIP)
-
+	// multicastIP := controllers.GenerateMulticastIP(userID)
+	// udpURL := fmt.Sprintf("udp://%s:55?localaddr=myzoom.co.il&pkt_size=1316", multicastIP)
+	ch := make(chan []byte, 10500000)
 	cmd := exec.Command("ffmpeg",
 		"-f", "webm",
-		"-analyzeduration", "1500000",
+		"-analyzeduration", "100000",
+		"-probesize", "32",
 		"-i", "pipe:0",
 		"-fflags", "nobuffer+flush_packets+discardcorrupt",
-		"-c", "copy",
+		"-c:v", "libx264",
 		"-preset", "ultrafast",
-		"-f", "webm",
-		"-fflags", "nobuffer+flush_packets+discardcorrupt",
-		udpURL,
+		"-tune", "zerolatency",
+		"-g", "25",
+		"-keyint_min", "25",
+		"-sc_threshold", "0",
+		"-c:a", "aac",
+		"-b:a", "128k",
+		"-f", "mpegts",
+		dashOutputDir+"/stream.ts",
 	)
 
+	ffmpegIn, err := cmd.StdinPipe()
+	if err != nil {
+		log.Println("Failed to get ffmpeg stdin:", err)
+		return
+	}
+
+	cmd.Stderr = log.Writer()
+	go func() {
+		ConvertToMPEGDASH(sessionID, userID, ch)
+	}()
+	go func() {
+		err = cmd.Start()
+		if err != nil {
+			log.Println("Failed to start ffmpeg:", err)
+			return
+		}
+	}()
+
+	log.Println("FFmpeg started, waiting for video chunks...")
+
+	defer ffmpegIn.Close()
+	for {
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("WebSocket closed:", err)
+			break
+		}
+		ch <- data
+		_, err = ffmpegIn.Write(data)
+		if err != nil {
+			log.Println("Error writing to ffmpeg stdin:", err)
+			break
+		}
+	}
+
+	cmd.Wait()
+	log.Println("FFmpeg process exited")
+}
+
+// ConvertToMPEGDASH listens to a multicast MPEG-TS stream and converts it into MPEG-DASH segments
+func ConvertToMPEGDASH(sessionID uint, userID uint, ch chan []byte) {
+	// Set up output directory
+	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
+	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
+	dashOutputDir := filepath.Join(userPath, "dash")
+
+	if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
+		return
+	}
+
+	cmd := exec.Command("ffmpeg",
+		"-loglevel", "quiet",
+		"-re",
+		"-i", "pipe:0",
+		"-fflags", "nobuffer+flush_packets+discardcorrupt",
+		"-codec:v", "libx264",
+		"-preset", "ultrafast",
+		"-tune", "zerolatency",
+		"-codec:a", "aac",
+		"-b:a", "128k",
+		"-f", "dash",
+		"-seg_duration", "1",
+		"-window_size", "5",
+		"-extra_window_size", "5",
+		"-remove_at_exit", "0",
+		dashOutputDir+"/stream.mpd",
+	)
 	ffmpegIn, err := cmd.StdinPipe()
 	if err != nil {
 		log.Println("Failed to get ffmpeg stdin:", err)
@@ -78,63 +152,17 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}()
-	go func() {
-		ConvertToMPEGDASH(sessionID, userID)
-	}()
-
-	log.Println("FFmpeg started, waiting for video chunks...")
 
 	for {
-		_, data, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("WebSocket closed:", err)
-			break
-		}
-		_, err = ffmpegIn.Write(data)
-		if err != nil {
-			log.Println("Error writing to ffmpeg stdin:", err)
-			break
+		select {
+		case data := <-ch:
+			ffmpegIn.Write(data)
+			if err != nil {
+				log.Println("Error writing to ffmpeg stdin:", err)
+				break
+			}
 		}
 	}
-
-	ffmpegIn.Close()
-	cmd.Wait()
-	log.Println("FFmpeg process exited")
-}
-
-// ConvertToMPEGDASH listens to a multicast MPEG-TS stream and converts it into MPEG-DASH segments
-func ConvertToMPEGDASH(sessionID uint, userID uint) {
-	// Set up output directory
-	sessionPath := filepath.Join("./uploads", fmt.Sprintf("%d", sessionID))
-	userPath := filepath.Join(sessionPath, fmt.Sprintf("%d", userID))
-	dashOutputDir := filepath.Join(userPath, "dash")
-
-	if err := os.MkdirAll(dashOutputDir, os.ModePerm); err != nil {
-		return
-	}
-
-	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
-	multicastIp := controllers.GenerateMulticastIP(userID)
-	cmd := fmt.Sprintf(
-		`ffmpeg -re -i udp://%s:55?localaddr=myzoom.co.il -fflags nobuffer+flush_packets+discardcorrupt -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 %s/stream.mpd`,
-		multicastIp, dashOutputDir,
-	)
-
-	// cmdRecord := fmt.Sprintf(
-	// 	`ffmpeg -i udp://%s:55?localaddr=myzoom.co.il -c:v libx264 -c:a aac -f dash -seg_duration 1 %s/stream.mpd`,
-	// 	multicastIp, dashOutputDir,
-	// )
-
-	// Broadcast to all clients in the session that a new user has joined
-	websocket2.BroadcastMessage(sessionID, "stream started")
-	// Run conversion in a goroutine to allow immediate HTTP response
-	go func() {
-		_ = utils.RunCommand(cmd)
-		// _ = utils.RunCommand(cmdRecord)
-	}()
-	// go func() {
-	// 	StartDashCleaner(dashOutputDir)
-	// }()
 }
 
 // ServeDashFile serves the DASH manifest file (.mpd) to the client

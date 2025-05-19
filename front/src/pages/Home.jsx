@@ -61,6 +61,7 @@ function Home() {
           <button className='b' onClick={()=>{navigate('/createmeeting')}}>Create</button>
           <button className='b' onClick={()=>{navigate('/friends')}}>Friends</button>
           <button className='b' onClick={()=>{navigate('/edit')}}>Edit user</button>
+          <button className='b' onClick={()=>{navigate('/vod')}}>VOD</button>
         </div>
     </div>
   );

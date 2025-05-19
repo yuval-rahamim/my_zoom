@@ -30,12 +30,13 @@ const Vod = () => {
 
   const fetchMeetings = async () => {
     try {
-      const res = await fetch('/user/meetings', { credentials: 'include' });
+      const res = await fetch('https://myzoom.co.il:3000/user/meetings', { credentials: 'include' });
       if (!res.ok) {
         navigate(res.status === 401 ? '/login' : '/signup');
         return;
       }
       const data = await res.json();
+      console.log('Fetched meetings:', data);
       setMeetings(data);
     } catch (err) {
       console.error('Failed to fetch meetings:', err);
@@ -101,7 +102,7 @@ const Vod = () => {
                   <div className="vod-video-wrapper">
                     <video
                       ref={(el) => (videoRefs.current[key] = el)}
-                      src={participant.videoUrl}
+                      src={"https://myzoom.co.il:3000"+participant.video_url}
                       controls
                       onPlay={() => handleVideoPlay(meeting.id, participant.id)}
                       className="vod-video"
