@@ -59,6 +59,7 @@ func main() {
 	r.GET("/users/cookie", middleware.AuthMiddleware(), controllers.User)
 	r.POST("/users/logout", middleware.AuthMiddleware(), controllers.LogOut)
 	r.GET("/users/:name", middleware.AuthMiddleware(), controllers.GetUserByName)
+	r.GET("/user/meetings", middleware.AuthMiddleware(), controllers.GetUserMeetings)
 
 	r.GET("/friends/all", middleware.AuthMiddleware(), controllers.GetFriends)
 	r.POST("/friends/add", middleware.AuthMiddleware(), controllers.AddFriend)
@@ -71,6 +72,7 @@ func main() {
 	r.GET("/sessions/:id", middleware.AuthMiddleware(), controllers.GetSessionDetails) // Fetch session details and participants
 
 	r.Static("/uploads", "./uploads")
+	r.Static("/videos", "./videos")
 
 	// r.POST("/video/upload", middleware.AuthMiddleware(), controllers.ConvertToMPEGTS)
 	r.POST("/video/stream", middleware.AuthMiddleware(), dasher.ServeDashFile)

@@ -16,7 +16,7 @@ export default defineConfig({
       "/api": {
         target: "https://myzoom.co.il:3000",
         changeOrigin: true,
-        secure: true // accept self-signed certificates
+        secure: true
       }
     }
   }

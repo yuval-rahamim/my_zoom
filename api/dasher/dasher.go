@@ -52,23 +52,14 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	multicastIP := controllers.GenerateMulticastIP(userID)
 	udpURL := fmt.Sprintf("udp://%s:55?localaddr=myzoom.co.il&pkt_size=1316", multicastIP)
 
-	cmd := exec.Command("ffmpeg", "-re",
+	cmd := exec.Command("ffmpeg",
 		"-f", "webm",
-		"-analyzeduration", "100000",
-		"-probesize", "32",
+		"-analyzeduration", "1500000",
 		"-i", "pipe:0",
 		"-fflags", "nobuffer+flush_packets+discardcorrupt",
-		"-c:v", "libx264",
+		"-c", "copy",
 		"-preset", "ultrafast",
-		"-tune", "zerolatency",
-		"-g", "25",
-		"-keyint_min", "25",
-		"-sc_threshold", "0",
-		"-c:a", "aac",
-		"-b:a", "128k",
-		"-ac", "2",
-		"-ar", "44100",
-		"-f", "mpegts",
+		"-f", "webm",
 		"-fflags", "nobuffer+flush_packets+discardcorrupt",
 		udpURL,
 	)
@@ -125,15 +116,22 @@ func ConvertToMPEGDASH(sessionID uint, userID uint) {
 	// FFmpeg command to listen to multicast MPEG-TS and convert to MPEG-DASH
 	multicastIp := controllers.GenerateMulticastIP(userID)
 	cmd := fmt.Sprintf(
-		`ffmpeg -re -i udp://%s:55?localaddr=myzoom.co.il -fflags nobuffer+flush_packets+discardcorrupt -codec:v libx264 -g 25 -keyint_min 25 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 1 -extra_window_size 5 -remove_at_exit 0 %s/stream.mpd`,
+		`ffmpeg -re -i udp://%s:55?localaddr=myzoom.co.il -fflags nobuffer+flush_packets+discardcorrupt -codec:v libx264 -preset ultrafast -tune zerolatency -codec:a aac -b:a 128k -f dash -seg_duration 1 -window_size 5 -extra_window_size 5 -remove_at_exit 0 %s/stream.mpd`,
 		multicastIp, dashOutputDir,
 	)
+
+	// cmdRecord := fmt.Sprintf(
+	// 	`ffmpeg -i udp://%s:55?localaddr=myzoom.co.il -c:v libx264 -c:a aac -f dash -seg_duration 1 %s/stream.mpd`,
+	// 	multicastIp, dashOutputDir,
+	// )
 
 	// Broadcast to all clients in the session that a new user has joined
 	websocket2.BroadcastMessage(sessionID, "stream started")
 	// Run conversion in a goroutine to allow immediate HTTP response
 	go func() {
 		_ = utils.RunCommand(cmd)
+		// _ = utils.RunCommand(cmdRecord)
+
 		// Broadcast to all clients in the session that a new user has joined
 		// message := fmt.Sprintf("Dash is ready for %d", userID)
 		// websocket2.BroadcastMessage(sessionID, message)

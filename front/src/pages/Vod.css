@@ -1,0 +1,58 @@
+.vod-container {
+    padding: 32px;
+  }
+  
+  .vod-title {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  
+  .vod-meeting {
+    margin-bottom: 40px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 24px;
+  }
+  
+  .vod-meeting-id {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  
+  .vod-video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+  }
+  
+  .vod-video-container {
+    position: relative;
+  }
+  
+  .vod-participant-info {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  
+  .vod-video-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  .vod-video {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+  
+  .vod-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+  }
+  

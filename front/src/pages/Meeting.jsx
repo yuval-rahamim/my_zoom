@@ -26,12 +26,21 @@ const Meeting = () => {
 
     const interval = setInterval(async () => {
       if (videoElement.paused || videoElement.ended) return;
-      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
+      const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions().withFaceDescriptors().withAgeAndGender();
       const resized = faceapi.resizeResults(detections, displaySize);
 
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       faceapi.draw.drawDetections(canvas, resized);
       faceapi.draw.drawFaceExpressions(canvas, resized)
+      // faceapi.draw.drawFaceLandmarks(canvas, resized);
+          //ask AI to guess the age and gender
+      resized.forEach(face=>{
+        const { age, gender } = face
+        const genderText = `${gender}`
+        const ageText = `${Math.round(age)} years`
+        const textField = new faceapi.draw.DrawTextField([genderText,ageText],face.detection.box.topRight)
+        textField.draw(canvas)
+    })
     }, 500);
 
     return interval;
@@ -65,7 +74,7 @@ const Meeting = () => {
           }
         };
 
-        mediaRecorder.start(1000);
+        mediaRecorder.start(500);
       };
 
       socket.onerror = (error) => {
@@ -177,6 +186,8 @@ const Meeting = () => {
       await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
       await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
       await faceapi.nets.faceExpressionNet.loadFromUri('/models');
+      await faceapi.nets.ageGenderNet.loadFromUri('/models');
+      await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
     };
 
     const seekLiveInterval = setInterval(() => {
@@ -260,12 +271,12 @@ try{
                 autoPlay
                 playsInline
                 className="video-player"
-                controls={true}
+                controls={false}
               />
-              {/* <canvas
+              <canvas
                 ref={(el) => (canvasRefs.current[p.id] = el)}
                 className="overlay-canvas"
-              /> */}
+              />
             </div>
             {!p.streamURL ? (
               <p>Waiting for stream...</p>

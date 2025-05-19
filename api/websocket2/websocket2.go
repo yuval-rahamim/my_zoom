@@ -9,6 +9,7 @@ import (
 	"time"
 	"yuval/inits"
 	"yuval/models"
+	"yuval/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -116,22 +117,21 @@ func HandleConnections(c *gin.Context) {
 			Where("session_id = ? AND left_at IS NULL", sessionID).
 			Count(&count).Error; err != nil {
 			log.Println("Failed to count users in session:", err)
+		} else if count == 0 {
+			// No users remaining in the session, mark it as inactive
+			var session models.Session
+			if err := inits.DB.First(&session, sessionID).Error; err == nil {
+				session.Status = "inactive"
+				if err := inits.DB.Save(&session).Error; err != nil {
+					log.Println("Failed to mark session as inactive:", err)
+				} else {
+					log.Printf("Session %d marked as inactive\n", sessionID)
+					go HandleSessionEnd(sessionID)
+				}
+			} else {
+				log.Println("Failed to find session for marking inactive:", err)
+			}
 		}
-		// } else if count == 0 {
-		// 	// No users remaining in the session, mark it as inactive
-		// 	var session models.Session
-		// 	if err := inits.DB.First(&session, sessionID).Error; err == nil {
-		// 		session.Status = "inactive"
-		// 		if err := inits.DB.Save(&session).Error; err != nil {
-		// 			log.Println("Failed to mark session as inactive:", err)
-		// 		} else {
-		// 			log.Printf("Session %d marked as inactive\n", sessionID)
-		// 			go HandleSessionEnd(sessionID)
-		// 		}
-		// 	} else {
-		// 		log.Println("Failed to find session for marking inactive:", err)
-		// 	}
-		// }
 
 		conn.Close()
 	}()
@@ -194,5 +194,5 @@ func BroadcastMessage(sessionID uint, message string) {
 func HandleSessionEnd(sessionID uint) {
 	// Perform cleanup, analytics, logging, etc.
 	log.Printf("Performing one-time cleanup for ended session %d\n", sessionID)
-	// utils.ConvertSessionDashToMP4(sessionID)
+	utils.ConvertSessionDashToMP4(sessionID)
 }

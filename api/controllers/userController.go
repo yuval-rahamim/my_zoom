@@ -364,3 +364,63 @@ func GetUserByName(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
+
+func GetUserMeetings(c *gin.Context) {
+	userID, err := GetValidUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Fetch all sessions the user has ever joined
+	var userSessions []models.UserSession
+	if err := inits.DB.Where("user_id = ?", userID).Find(&userSessions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user sessions"})
+		return
+	}
+
+	sessionSeen := make(map[uint]bool)
+	var result []map[string]interface{}
+
+	for _, us := range userSessions {
+		sessionID := us.SessionID
+
+		// Skip duplicate sessions
+		if sessionSeen[sessionID] {
+			continue
+		}
+		sessionSeen[sessionID] = true
+
+		var session models.Session
+		if err := inits.DB.First(&session, sessionID).Error; err != nil {
+			continue
+		}
+
+		// Fetch all users in this session
+		var sessionParticipants []models.UserSession
+		if err := inits.DB.Where("session_id = ?", sessionID).Find(&sessionParticipants).Error; err != nil {
+			continue
+		}
+
+		var participants []map[string]interface{}
+		for _, part := range sessionParticipants {
+			var user models.User
+			if err := inits.DB.First(&user, part.UserID).Error; err != nil {
+				continue
+			}
+
+			participants = append(participants, map[string]interface{}{
+				"id":        user.ID,
+				"name":      user.Name,
+				"video_url": fmt.Sprintf("/videos/meeting_%d_user_%d.mp4", sessionID, user.ID),
+			})
+		}
+
+		result = append(result, map[string]interface{}{
+			"id":           session.Name,
+			"participants": participants,
+		})
+	}
+
+	c.JSON(http.StatusOK, result)
+}
