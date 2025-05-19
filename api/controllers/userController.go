@@ -142,18 +142,16 @@ func UsersCreate(c *gin.Context) {
 
 // User login function
 func Login(c *gin.Context) {
-
 	if err := c.ShouldBindJSON(&account); err != nil {
-		log.Printf("Database error: %v", err)
+		log.Printf("Bind error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request"})
 		return
 	}
 
 	var user models.User
 	result := inits.DB.Where("name = ?", account.Name).First(&user)
-
 	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+		log.Printf("DB error: %v", result.Error)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "User not found"})
 		return
 	}
@@ -176,20 +174,41 @@ func Login(c *gin.Context) {
 
 	token, err := claims.SignedString([]byte(secret))
 	if err != nil {
-		log.Printf("Error creating token: %v", err)
+		log.Printf("Token creation error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create token"})
 		return
 	}
 
-	// Set cookie to expire in 30 minutes
-	c.SetCookie("JWT", token, 30*60, "/", "myzoom.co.il", false, true)
+	// Set HTTPS-secure cookie with SameSite=None (required for cross-site requests)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "JWT",
+		Value:    token,
+		Path:     "/",
+		Domain:   "myzoom.co.il",
+		Expires:  time.Now().Add(30 * time.Minute),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // Log out user
 func LogOut(c *gin.Context) {
-	c.SetCookie("JWT", "", -1, "/", "", false, true)
+	// Overwrite the JWT cookie with an expired one
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "JWT",
+		Value:    "",
+		Path:     "/",
+		Domain:   "myzoom.co.il",
+		Expires:  time.Now().Add(-time.Hour), // Expire immediately
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
+
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 

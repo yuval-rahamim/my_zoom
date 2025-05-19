@@ -144,14 +144,14 @@ const Meeting = () => {
             player.current.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
               
               // if (player.current.isDynamic()) {
-                // player.current.seekToOriginalLive();
+                player.current.seekToOriginalLive();
               // }
             });
             
             // Start face detection once metadata is loaded
             
             videoElement.onloadedmetadata = () => {
-              // player.current.seekToOriginalLive();
+              player.current.seekToOriginalLive();
 
               const canvas = canvasRefs.current[p.id];
               if (canvas) {
