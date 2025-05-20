@@ -59,7 +59,9 @@ func main() {
 	r.GET("/users/cookie", middleware.AuthMiddleware(), controllers.User)
 	r.POST("/users/logout", middleware.AuthMiddleware(), controllers.LogOut)
 	r.GET("/users/:name", middleware.AuthMiddleware(), controllers.GetUserByName)
+
 	r.GET("/user/meetings", middleware.AuthMiddleware(), controllers.GetUserMeetings)
+	r.DELETE("/user/meetings/delete", middleware.AuthMiddleware(), controllers.DeleteUserMeetingVideos)
 
 	r.GET("/friends/all", middleware.AuthMiddleware(), controllers.GetFriends)
 	r.POST("/friends/add", middleware.AuthMiddleware(), controllers.AddFriend)

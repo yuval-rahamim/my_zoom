@@ -85,12 +85,42 @@ const Vod = () => {
     video.onended = () => clearInterval(id);
   };
 
+  const deletVideo = async (meetingId) => {
+    try {
+      const res = await fetch(`https://myzoom.co.il:3000/user/meetings/delete`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meetingId }),
+      });
+  
+      if (!res.ok) {
+        console.error('Failed to delete video:', res.statusText);
+        return;
+      }
+  
+      const data = await res.json();
+      console.log('Deleted video:', data);
+  
+      // Refresh meetings list
+      fetchMeetings();
+    } catch (err) {
+      console.error('Error deleting video:', err);
+    }
+  };
+  
+
   return (
     <div className="vod-container">
       <h1 className="vod-title">VOD Library</h1>
       {meetings.map((meeting) => (
         <div key={meeting.id} className="vod-meeting">
           <h2 className="vod-meeting-id">{meeting.id}</h2>
+          <button onClick={() => deletVideo(meeting.id)} className="vod-delete-button">
+          🗑️
+          </button>
           <div className="vod-video-grid">
             {meeting.participants.map((participant) => {
               const key = `${meeting.id}-${participant.id}`;

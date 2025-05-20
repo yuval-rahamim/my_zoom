@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 	"yuval/inits"
 	"yuval/models"
@@ -453,4 +455,46 @@ func GetUserMeetings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func DeleteUserMeetingVideos(c *gin.Context) {
+	fmt.Print("0")
+	var req struct {
+		MeetingID int `json:"meetingId"`
+	}
+
+	fmt.Print("1")
+	// Parse JSON body
+	if err := c.ShouldBindJSON(&req); err != nil || req.MeetingID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting ID"})
+		return
+	}
+	fmt.Print("2")
+	// Construct the session's video folder path
+	sessionVideoPath := fmt.Sprintf("videos/%d", req.MeetingID)
+
+	// Check if the directory exists
+	if _, err := os.Stat(sessionVideoPath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No videos found for this meeting"})
+		return
+	}
+	fmt.Print("3")
+	// Read all files in the directory
+	files, err := os.ReadDir(sessionVideoPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read session video directory"})
+		return
+	}
+	fmt.Print("4")
+	// Delete each .mp4 file
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".mp4") {
+			filePath := filepath.Join(sessionVideoPath, file.Name())
+			if err := os.Remove(filePath); err != nil {
+				log.Printf("Failed to delete file %s: %v", filePath, err)
+			}
+		}
+	}
+	fmt.Print("5")
+	c.JSON(http.StatusOK, gin.H{"message": "All session videos deleted successfully"})
 }
