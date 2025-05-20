@@ -125,6 +125,9 @@ func ConvertToMPEGDASH(sessionID uint, userID uint, ch chan []byte) {
 	cmd := exec.Command("ffmpeg",
 		"-loglevel", "quiet",
 		"-re",
+		"-f", "webm",
+		"-analyzeduration", "100000",
+		"-probesize", "32",
 		"-i", "pipe:0",
 		"-fflags", "nobuffer+flush_packets+discardcorrupt",
 		"-codec:v", "libx264",
@@ -133,12 +136,60 @@ func ConvertToMPEGDASH(sessionID uint, userID uint, ch chan []byte) {
 		"-codec:a", "aac",
 		"-b:a", "128k",
 		"-f", "dash",
+		"-fflags", "nobuffer+flush_packets+discardcorrupt",
+		"-g", "25",
+		"-keyint_min", "25",
+		"-sc_threshold", "0",
 		"-seg_duration", "1",
 		"-window_size", "5",
 		"-extra_window_size", "5",
-		"-remove_at_exit", "0",
+		"-remove_at_exit", "1",
 		dashOutputDir+"/stream.mpd",
 	)
+
+	// cmd := exec.Command("ffmpeg",
+	// 	"-loglevel", "quiet",
+	// 	"-re",
+	// 	"-i", "pipe:0",
+	// 	"-fflags", "nobuffer+flush_packets+discardcorrupt",
+	// 	// Split and scale the input to two outputs
+	// 	"-filter_complex", "[0:v]split=2[v1][v2];[v1]scale=w=1280:h=720[v1out];[v2]scale=w=640:h=360[v2out]",
+
+	// 	// Map the video and audio streams
+	// 	"-map", "[v1out]",
+	// 	"-map", "[v2out]",
+	// 	"-map", "0:a",
+	// 	"-map", "0:a",
+
+	// 	// Codec settings for both video streams
+	// 	"-c:v", "libx264",
+	// 	"-preset", "ultrafast",
+	// 	"-tune", "zerolatency",
+	// 	"-g", "25",
+	// 	"-keyint_min", "25",
+	// 	"-sc_threshold", "0",
+	// 	"-b:v:0", "1000k", // high quality
+	// 	"-b:v:1", "800k", // low quality
+
+	// 	// Audio settings
+	// 	"-c:a", "aac",
+	// 	"-b:a:0", "128k",
+	// 	"-b:a:1", "64k",
+
+	// 	// DASH output
+	// 	"-f", "dash",
+	// 	"-fflags", "nobuffer+flush_packets+discardcorrupt",
+	// 	"-seg_duration", "1",
+	// 	"-use_template", "1",
+	// 	"-use_timeline", "1",
+	// 	"-adaptation_sets", "id=0,streams=v id=1,streams=a",
+	// 	"-window_size", "5",
+	// 	"-extra_window_size", "5",
+	// 	"-remove_at_exit", "0",
+
+	// 	dashOutputDir+"/stream.mpd",
+	// )
+
 	ffmpegIn, err := cmd.StdinPipe()
 	if err != nil {
 		log.Println("Failed to get ffmpeg stdin:", err)

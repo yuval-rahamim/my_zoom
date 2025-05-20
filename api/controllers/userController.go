@@ -62,8 +62,7 @@ func GetUserIDFromToken(c *gin.Context) (string, error) {
 
 	// Step 4: Extend the cookie's expiration time
 	maxAge := 30 * 60 // 30 minutes
-	c.SetCookie("JWT", cookieValue, maxAge, "/", "", false, true)
-
+	c.SetCookie("JWT", cookieValue, maxAge, "/", "myzoom.co.il", true, true)
 	return userID, nil
 }
 
@@ -187,7 +186,7 @@ func Login(c *gin.Context) {
 		Value:    token,
 		Path:     "/",
 		Domain:   "myzoom.co.il",
-		Expires:  time.Now().Add(30 * time.Minute),
+		Expires:  time.Now().Add(400 * time.Minute),
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
@@ -204,12 +203,13 @@ func LogOut(c *gin.Context) {
 		Value:    "",
 		Path:     "/",
 		Domain:   "myzoom.co.il",
-		Expires:  time.Now().Add(-time.Hour), // Expire immediately
+		Expires:  time.Date(1970, 8, 4, 10, 2, 0, 0, time.Local), // Expire immediately
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
 	})
+	//
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }

@@ -13,6 +13,7 @@ const Meeting = () => {
  const localVideoRef = useRef(null);
  const videoRefs = useRef({});
 
+ const [numOfUsers,setNumOfUsers] = useState(0);
  const dashPlayers = useRef({}); 
  const canvasRefs = useRef({});
  const { id } = useParams();
@@ -29,7 +30,7 @@ const Meeting = () => {
    if (videoElement.paused || videoElement.ended) return;
    const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions().withFaceDescriptors().withAgeAndGender();
    const resized = faceapi.resizeResults(detections, displaySize);
-
+   detections.length > 0 ? setNumOfUsers(detections.length) : setNumOfUsers(0);
    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
    faceapi.draw.drawDetections(canvas, resized);
    faceapi.draw.drawFaceExpressions(canvas, resized)
@@ -179,30 +180,36 @@ const Meeting = () => {
    await faceapi.nets.ageGenderNet.loadFromUri('/models');
    await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
   };
-//   const seekLiveInterval = setInterval(() => {
-
-//    console.log("AVI 3333333");
-//    player.current.seekToOriginalLive();
-   
-//   },10000);
-
-//   const printInterval = setInterval(() => {
-// try{
-
-//  console.log("getCurrentLiveLatency",player.current.getCurrentLiveLatency());
-
- 
-// }catch(e){console.log("SHIT",e)}
-   
-//   },1000);
-
+  const seekLiveInterval = setInterval(() => {
+    Object.entries(dashPlayers.current).forEach(([id, player]) => {
+      try {
+        if (player && typeof player.seekToOriginalLive === 'function') {
+          console.log(`[${id}] Seeking to live`);
+          player.seekToOriginalLive();
+        }
+      } catch (e) {
+        console.error(`[${id}] Seek live error:`, e);
+      }
+    });
+  }, 10000);
+  
+  const printInterval = setInterval(() => {
+    Object.entries(dashPlayers.current).forEach(([id, player]) => {
+      try {
+        const latency = player.getCurrentLiveLatency?.();
+        console.log(`[${id}] Live latency:`, latency);
+      } catch (e) {
+        console.error(`[${id}] Live latency error:`, e);
+      }
+    });
+  }, 1000);  
 
   loadModels();
-//   return () => {
+  return () => {
 
-//    clearTimeout(seekLiveInterval);
-//    clearTimeout(printInterval);
-//   }
+   clearTimeout(seekLiveInterval);
+   clearTimeout(printInterval);
+  }
  }, []);
 
  // 2. Handle auth and start media when isLoggedIn is true and loading is done
@@ -255,6 +262,7 @@ const Meeting = () => {
     {/* Local Video */}
     <div className="video-card">
      <h4>{name}</h4>
+     <h4>Number of users: {numOfUsers}</h4>
      <div className="video-wrapper">
       <video ref={localVideoRef} autoPlay muted playsInline className="video-player" />
       <canvas id="local-face-canvas" className="overlay-canvas" />

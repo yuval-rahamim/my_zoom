@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as faceapi from 'face-api.js';
 import './Vod.css';
+import Swal from 'sweetalert2';
 
 const Vod = () => {
   const [meetings, setMeetings] = useState([]);
@@ -99,12 +100,22 @@ const Vod = () => {
   
       if (!res.ok) {
         console.error('Failed to delete video:', res.statusText);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: `Failed to delete video: ${res.statusText}`,
+        });
         return;
       }
   
       const data = await res.json();
       console.log('Deleted video:', data);
-  
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Video deleted successfully!',
+      });
       // Refresh meetings list
       fetchMeetings();
     } catch (err) {

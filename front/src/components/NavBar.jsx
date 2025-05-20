@@ -59,6 +59,7 @@ const Navbar = () => {
         credentials: 'include',
       });
 
+      document.cookie = "JWT; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=myzoom.co.il; SameSite=None; Secure"
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
       setUser(null);
