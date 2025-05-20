@@ -86,6 +86,7 @@ const Vod = () => {
   };
 
   const deletVideo = async (meetingId) => {
+    console.log('Deleting video with ID:', meetingId);
     try {
       const res = await fetch(`https://myzoom.co.il:3000/user/meetings/delete`, {
         method: 'DELETE',
@@ -117,7 +118,7 @@ const Vod = () => {
       <h1 className="vod-title">VOD Library</h1>
       {meetings.map((meeting) => (
         <div key={meeting.id} className="vod-meeting">
-          <h2 className="vod-meeting-id">{meeting.id}</h2>
+          <h2 className="vod-meeting-id">{meeting.name}(ID: {meeting.id})</h2>
           <button onClick={() => deletVideo(meeting.id)} className="vod-delete-button">
           🗑️
           </button>

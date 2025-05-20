@@ -448,7 +448,8 @@ func GetUserMeetings(c *gin.Context) {
 		// Only include the session if it has participants with valid streams
 		if len(participants) > 0 {
 			result = append(result, map[string]interface{}{
-				"id":           session.Name,
+				"id":           session.ID,
+				"name":         session.Name,
 				"participants": participants,
 			})
 		}
@@ -465,8 +466,16 @@ func DeleteUserMeetingVideos(c *gin.Context) {
 
 	fmt.Print("1")
 	// Parse JSON body
-	if err := c.ShouldBindJSON(&req); err != nil || req.MeetingID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meeting ID"})
+	if err := c.ShouldBindJSON(&req); err != nil { // Check for bind error first
+		log.Printf("Failed to bind JSON for delete meeting: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body or meeting ID format"})
+		return
+	}
+
+	// Then check the value
+	if req.MeetingID <= 0 {
+		log.Printf("Received invalid MeetingID: %d", req.MeetingID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Meeting ID must be a positive integer"})
 		return
 	}
 	fmt.Print("2")
